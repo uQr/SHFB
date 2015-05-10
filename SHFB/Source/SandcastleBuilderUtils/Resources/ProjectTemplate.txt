@@ -1,4 +1,4 @@
-﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+﻿<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
 		<!-- The configuration and platform will be used to determine which assemblies to include from solution and
 				 project documentation sources -->
@@ -15,7 +15,7 @@
 		<Name>$safeprojectname$</Name>
 
 		<!-- SHFB properties -->
-		<FrameworkVersion>.NET Framework 4.0</FrameworkVersion>
+		<FrameworkVersion>.NET Framework 4.5</FrameworkVersion>
 		<OutputPath>.\Help\</OutputPath>
 		<HtmlHelpName>$safeprojectname$</HtmlHelpName>
 		<Language>en-US</Language>

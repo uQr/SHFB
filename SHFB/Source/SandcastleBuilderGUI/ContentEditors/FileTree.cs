@@ -258,7 +258,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                     itemNode = new TreeNode(name);
                     itemNode.Name = folder;
-                    itemNode.Tag = new NodeData(BuildAction.Folder, fileItem, null);
+                    itemNode.Tag = new NodeData(BuildAction.Folder, fileItem);
                     itemNode.ImageIndex = itemNode.SelectedImageIndex = (int)NodeIcon.GeneralFolder;
 
                     AddNode(root.Nodes, itemNode);
@@ -289,7 +289,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                     itemNode = new TreeNode(Path.GetFileName(key));
                     itemNode.Name = key;
-                    itemNode.Tag = new NodeData(fileItem.BuildAction, fileItem, null);
+                    itemNode.Tag = new NodeData(fileItem.BuildAction, fileItem);
                     itemNode.ImageIndex = itemNode.SelectedImageIndex = (int)NodeIconFromFilename(key);
 
                     AddNode(root.Nodes, itemNode);

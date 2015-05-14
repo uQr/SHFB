@@ -77,6 +77,7 @@ namespace SandcastleBuilder.Utils
         #region Methods
         //=====================================================================
 
+        // TODO: Is this needed anymore?  Can it go away?
         /// <summary>
         /// This is used to see if the project can be edited.  If not, abort
         /// the change by throwing an exception.
@@ -88,13 +89,6 @@ namespace SandcastleBuilder.Utils
                 isDirty = true;
             else
             {
-                CancelEventArgs ce = new CancelEventArgs();
-                projectFile.OnQueryEditProjectFile(ce);
-
-                if(ce.Cancel)
-                    throw new OperationCanceledException(
-                        "Project cannot be edited");
-
                 isDirty = true;
                 projectFile.MarkAsDirty();
             }

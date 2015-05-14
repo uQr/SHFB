@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : MainForm.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/03/2015
+// Updated : 05/10/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -32,7 +32,7 @@
 // 1.9.5.0  10/05/2012  EFW  Added support for Help Viewer 2.0
 // -------  02/15/2014  EFW  Added support for the Open XML output format
 //          04/01/2015  EFW  Added support for the Markdown file format
-//          05/03/2015  EFW  Removed support for the MS Help 2 file format
+//          05/03/2015  EFW  Removed support for the MS Help 2 file format and the project converters
 //===============================================================================================================
 
 using System;
@@ -58,7 +58,6 @@ using Sandcastle.Core;
 using SandcastleBuilder.MicrosoftHelpViewer;
 using SandcastleBuilder.Utils;
 using SandcastleBuilder.Utils.BuildEngine;
-using SandcastleBuilder.Utils.Conversion;
 using SandcastleBuilder.Utils.Controls;
 using SandcastleBuilder.Utils.Design;
 
@@ -272,7 +271,6 @@ namespace SandcastleBuilder.Gui
             List<string> values;
 
             project = new SandcastleProject(projectName, mustExist);
-            project.DocumentationSourcesChanged += new EventHandler(project_Modified);
             project.DirtyChanged += new EventHandler(project_Modified);
 
             projectExplorer.CurrentProject = projectProperties.CurrentProject = project;
@@ -744,16 +742,8 @@ namespace SandcastleBuilder.Gui
                     {
                         System.Diagnostics.Debug.Write(pex);
 
-                        if(pex.Message.IndexOf("<project>", StringComparison.Ordinal) != -1)
-                        {
-                            MessageBox.Show("The project file format is invalid.  If this project was created " +
-                                "with an earlier version of the Sandcastle Help File Builder, use the File | " +
-                                "New Project from Other Format option to convert it to the latest project file " +
-                                "format.", Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                        else
-                            MessageBox.Show(pex.Message, Constants.AppName, MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
+                        MessageBox.Show("The project file format is invalid: " + pex.Message, Constants.AppName,
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     catch(Exception ex)
                     {
@@ -1036,44 +1026,6 @@ namespace SandcastleBuilder.Gui
         }
 
         /// <summary>
-        /// Create a new project from a project file that is in a different format (i.e. SHFB 1.7.0.0 or earlier
-        /// or NDoc 1.x)
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void miNewFromOtherFormat_Click(object sender, EventArgs e)
-        {
-            if(this.CloseProject())
-                using(NewFromOtherFormatDlg dlg = new NewFromOtherFormatDlg())
-                {
-                    if(dlg.ShowDialog() == DialogResult.OK)
-                    {
-                        try
-                        {
-                            this.Cursor = Cursors.WaitCursor;
-                            this.CreateProject(dlg.NewProjectFilename, true);
-                            this.UpdateFilenameInfo();
-                            MainForm.UpdateMruList(project.Filename);
-
-                            MessageBox.Show("The project was converted successfully", Constants.AppName,
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        catch(Exception ex)
-                        {
-                            System.Diagnostics.Debug.Write(ex);
-                            MessageBox.Show(ex.Message, Constants.AppName, MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                        }
-                        finally
-                        {
-                            this.Cursor = Cursors.Default;
-                            projectProperties.RefreshProperties();
-                        }
-                    }
-                }
-        }
-
-        /// <summary>
         /// Open an existing help project
         /// </summary>
         /// <param name="sender">The sender of the event</param>
@@ -1101,20 +1053,8 @@ namespace SandcastleBuilder.Gui
                         {
                             System.Diagnostics.Debug.Write(pex);
 
-                            if(dlg.FileName.EndsWith(".shfb", StringComparison.OrdinalIgnoreCase) ||
-                              pex.Message.IndexOf("<project>", StringComparison.Ordinal) != -1)
-                            {
-                                MessageBox.Show("The project file format is invalid.  " +
-                                    "If this project was created with an earlier " +
-                                    "version of the Sandcastle Help File Builder, " +
-                                    "use the File | New Project from Other Format " +
-                                    "option to convert it to the latest project file " +
-                                    "format.", Constants.AppName,
-                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                            else
-                                MessageBox.Show(pex.Message, Constants.AppName,
-                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("The project file format is invalid: " + pex.Message,
+                                Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                         catch(Exception ex)
                         {
@@ -1193,19 +1133,8 @@ namespace SandcastleBuilder.Gui
                 {
                     System.Diagnostics.Debug.Write(pex);
 
-                    if(pex.Message.IndexOf("<project>", StringComparison.Ordinal) != -1)
-                    {
-                        MessageBox.Show("The project file format is invalid.  " +
-                            "If this project was created with an earlier " +
-                            "version of the Sandcastle Help File Builder, " +
-                            "use the File | New Project from Other Format " +
-                            "option to convert it to the latest project file " +
-                            "format.", Constants.AppName,
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                        MessageBox.Show(pex.Message, Constants.AppName,
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("The project file format is invalid: " + pex.Message, Constants.AppName,
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 catch(Exception ex)
                 {

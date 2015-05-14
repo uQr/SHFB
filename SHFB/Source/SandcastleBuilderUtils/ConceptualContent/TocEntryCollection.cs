@@ -50,14 +50,6 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         //=====================================================================
 
         /// <summary>
-        /// This read-only property returns the project file item associated with the collection
-        /// </summary>
-        public FileItem FileItem
-        {
-            get { return siteMapFile; }
-        }
-
-        /// <summary>
         /// This is used to get the default topic
         /// </summary>
         /// <value>It returns the default topic or null if one is not set</value>

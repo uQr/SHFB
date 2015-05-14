@@ -223,7 +223,7 @@ namespace SandcastleBuilder.WPF.UserControls
         /// <remarks>Token information is also loaded here and passed on to the converter.</remarks>
         private void LoadTableOfContentsInfo()
         {
-            FileItemCollection imageFiles, tokenFiles, contentLayoutFiles;
+            FileItemCollection contentLayoutFiles;
             List<ITableOfContents> tocFiles;
             TopicCollection contentLayout;
             TokenCollection tokens;
@@ -259,12 +259,8 @@ namespace SandcastleBuilder.WPF.UserControls
 
                 // Get the image files.  This information is used to resolve media link elements in the
                 // topic files.
-                imageFiles = new FileItemCollection(currentProject, BuildAction.Image);
-
-                foreach(FileItem file in imageFiles)
-                    if(!String.IsNullOrEmpty(file.ImageId))
-                        converter.MediaFiles[file.ImageId] = new KeyValuePair<string, string>(file.FullPath,
-                            file.AlternateText);
+                foreach(var file in currentProject.ImagesReferences())
+                    converter.MediaFiles[file.Id] = new KeyValuePair<string, string>(file.FullPath, file.AlternateText);
             }
             catch(Exception ex)
             {
@@ -278,11 +274,8 @@ namespace SandcastleBuilder.WPF.UserControls
             {
                 converter.Tokens.Clear();
 
-                // Get the token files.  This information is used to resolve token elements in the
-                // topic files.
-                tokenFiles = new FileItemCollection(currentProject, BuildAction.Tokens);
-
-                foreach(FileItem file in tokenFiles)
+                // Get the token files.  This information is used to resolve token elements in the topic files.
+                foreach(var file in currentProject.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath))
                 {
                     // If open in an editor, use the edited values
                     if(!args.TokenFiles.TryGetValue(file.FullPath, out tokens))

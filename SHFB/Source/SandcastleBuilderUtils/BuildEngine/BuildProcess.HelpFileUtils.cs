@@ -90,7 +90,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 toc.ResetSortOrder();
 
                 // See if a root content container is defined for MSHV output
-                var root = conceptualContent.Topics.FirstOrDefault(t => t.MSHVRootContentContainer != null);
+                var root = this.ConceptualContent.Topics.FirstOrDefault(t => t.MSHVRootContentContainer != null);
 
                 if(root != null)
                     this.RootContentContainerId = root.MSHVRootContentContainer.Id;
@@ -216,7 +216,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             // Add the conceptual content layout files
             tocFiles = new List<ITableOfContents>();
 
-            foreach(TopicCollection topics in conceptualContent.Topics)
+            foreach(TopicCollection topics in this.ConceptualContent.Topics)
                 tocFiles.Add(topics);
 
             // Load all site maps and add them to the list
@@ -478,7 +478,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// </summary>
         private void CopyAdditionalContent()
         {
-            FileItemCollection contentItems;
             string projectPath, source, filename, dirName;
 
             this.ReportProgress(BuildStep.CopyAdditionalContent, "Copying additional content files...");
@@ -494,13 +493,12 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 else
                 {
                     // Now copy the content files
-                    contentItems = new FileItemCollection(project, BuildAction.Content);
                     projectPath = FolderPath.TerminatePath(Path.GetDirectoryName(originalProjectName));
 
-                    foreach(FileItem fileItem in contentItems)
+                    foreach(var fileItem in project.ContentFiles(BuildAction.Content))
                     {
-                        source = fileItem.Include;
-                        dirName = Path.GetDirectoryName(fileItem.Link.ToString().Substring(projectPath.Length));
+                        source = fileItem.FullPath;
+                        dirName = Path.GetDirectoryName(fileItem.LinkPath.Substring(projectPath.Length));
                         filename = Path.Combine(dirName, Path.GetFileName(source));
 
                         this.EnsureOutputFoldersExist(dirName);
@@ -729,7 +727,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
             // When reading the file, use the default encoding but detect the encoding if byte order marks are
             // present.
-            content = BuildProcess.ReadWithEncoding(workingFolder + "WebTOC.xml", ref enc);
+            content = Utility.ReadWithEncoding(workingFolder + "WebTOC.xml", ref enc);
 
             using(StringReader sr = new StringReader(content))
             {

@@ -316,7 +316,7 @@ namespace SandcastleBuilder.PlugIns
             // AjaxDoc 1.1 prefixes all member names with "J#" which causes BuildAssembler's
             // ResolveReferenceLinksComponent component in the Sept 2007 CTP to crash.  As such, we'll strip it
             // out.  I can't see a need for it anyway.
-            content = BuildProcess.ReadWithEncoding(workingPath, ref enc);
+            content = Utility.ReadWithEncoding(workingPath, ref enc);
             content = content.Replace(":J#", ":");
 
             using(StreamWriter sw = new StreamWriter(workingPath, false, enc))
@@ -324,7 +324,7 @@ namespace SandcastleBuilder.PlugIns
                 sw.Write(content);
             }
 
-            content = BuildProcess.ReadWithEncoding(builder.ReflectionInfoFilename, ref enc);
+            content = Utility.ReadWithEncoding(builder.ReflectionInfoFilename, ref enc);
             content = content.Replace(":J#", ":");
 
             using(StreamWriter sw = new StreamWriter(builder.ReflectionInfoFilename, false, enc))

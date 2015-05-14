@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SandcastleProject.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/07/2015
+// Updated : 05/13/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -90,6 +90,7 @@ using Sandcastle.Core.Frameworks;
 using Sandcastle.Core.PresentationStyle;
 
 using SandcastleBuilder.Utils.BuildComponent;
+using SandcastleBuilder.Utils.ConceptualContent;
 using SandcastleBuilder.Utils.Design;
 
 namespace SandcastleBuilder.Utils
@@ -149,9 +150,6 @@ namespace SandcastleBuilder.Utils
 
         // List of namespace summary items
         private NamespaceSummaryItemCollection namespaceSummaries;
-
-        // List of reference dependencies for the documentation sources
-        private ReferenceItemCollection references;
 
         // Build component configurations
         private ComponentConfigurationDictionary componentConfigs;
@@ -254,7 +252,7 @@ namespace SandcastleBuilder.Utils
 
                 if(msBuildProject != null)
                 {
-                    if(!msBuildProject.GlobalProperties.TryGetValue(ProjectElement.Configuration, out config))
+                    if(!msBuildProject.GlobalProperties.TryGetValue(BuildItemMetadata.Configuration, out config))
                         config = null;
                 }
 
@@ -268,7 +266,7 @@ namespace SandcastleBuilder.Utils
                 if(value == null || value.Trim().Length == 0)
                     value = DefaultConfiguration;
 
-                msBuildProject.SetGlobalProperty(ProjectElement.Configuration, value);
+                msBuildProject.SetGlobalProperty(BuildItemMetadata.Configuration, value);
                 msBuildProject.ReevaluateIfNecessary();
             }
         }
@@ -287,7 +285,7 @@ namespace SandcastleBuilder.Utils
 
                 if(msBuildProject != null)
                 {
-                    if(!msBuildProject.GlobalProperties.TryGetValue(ProjectElement.Platform, out platform))
+                    if(!msBuildProject.GlobalProperties.TryGetValue(BuildItemMetadata.Platform, out platform))
                         platform = null;
                 }
 
@@ -301,7 +299,7 @@ namespace SandcastleBuilder.Utils
                 if(value == null || value.Trim().Length == 0)
                     value = DefaultPlatform;
 
-                msBuildProject.SetGlobalProperty(ProjectElement.Platform, value);
+                msBuildProject.SetGlobalProperty(BuildItemMetadata.Platform, value);
                 msBuildProject.ReevaluateIfNecessary();
             }
         }
@@ -322,7 +320,7 @@ namespace SandcastleBuilder.Utils
                 if(msBuildProject != null)
                 {
                     // Ignore ".\" as that's our default.
-                    if(msBuildProject.GlobalProperties.TryGetValue(ProjectElement.OutDir, out outDir))
+                    if(msBuildProject.GlobalProperties.TryGetValue(BuildItemMetadata.OutDir, out outDir))
                         if(outDir == @".\")
                             outDir = null;
                 }
@@ -334,7 +332,7 @@ namespace SandcastleBuilder.Utils
                 if(value == null)
                     value = String.Empty;
 
-                msBuildProject.SetGlobalProperty(ProjectElement.OutDir, value);
+                msBuildProject.SetGlobalProperty(BuildItemMetadata.OutDir, value);
                 msBuildProject.ReevaluateIfNecessary();
             }
         }
@@ -345,15 +343,6 @@ namespace SandcastleBuilder.Utils
         public bool IsDirty
         {
             get { return isDirty || msBuildProject.Xml.HasUnsavedChanges; }
-        }
-
-        /// <summary>
-        /// This is used to get a collection of reference dependencies (files, GAC, COM, or project) for
-        /// MRefBuilder if needed.
-        /// </summary>
-        public ReferenceItemCollection References
-        {
-            get { return references; }
         }
 
         /// <summary>
@@ -521,8 +510,6 @@ namespace SandcastleBuilder.Utils
 
                 this.SetProjectProperty("ComponentPath", value);
                 componentPath = value;
-                componentPath.PersistablePathChanging += PathProperty_Changing;
-                componentPath.PersistablePathChanged += PathProperty_Changed;
             }
         }
 
@@ -541,8 +528,6 @@ namespace SandcastleBuilder.Utils
 
                 this.SetProjectProperty("HtmlHelp1xCompilerPath", value);
                 hhcPath = value;
-                hhcPath.PersistablePathChanging += PathProperty_Changing;
-                hhcPath.PersistablePathChanged += PathProperty_Changed;
             }
         }
 
@@ -594,8 +579,6 @@ namespace SandcastleBuilder.Utils
 
                 this.SetProjectProperty("WorkingPath", value);
                 workingPath = value;
-                workingPath.PersistablePathChanging += PathProperty_Changing;
-                workingPath.PersistablePathChanged += PathProperty_Changed;
             }
         }
         #endregion
@@ -666,8 +649,6 @@ namespace SandcastleBuilder.Utils
 
                 this.SetProjectProperty("BuildLogFile", value);
                 buildLogFile = value;
-                buildLogFile.PersistablePathChanging += PathProperty_Changing;
-                buildLogFile.PersistablePathChanged += PathProperty_Changed;
             }
         }
 
@@ -1939,46 +1920,6 @@ namespace SandcastleBuilder.Utils
         //=====================================================================
 
         /// <summary>
-        /// This event is raised when a property is about to be changed to see
-        /// if the project file can be edited.
-        /// </summary>
-        /// <remarks>If the project file cannot be edited, the handler should
-        /// cancel the event so that the property is not changed.</remarks>
-        public event EventHandler<CancelEventArgs> QueryEditProjectFile;
-
-        /// <summary>
-        /// This raises the <see cref="QueryEditProjectFile"/> event.
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        protected internal void OnQueryEditProjectFile(CancelEventArgs e)
-        {
-            var handler = QueryEditProjectFile;
-
-            if(handler != null)
-                handler(this, e);
-        }
-
-        /// <summary>
-        /// This event is raised when a property is changed
-        /// </summary>
-        public event EventHandler<ProjectPropertyChangedEventArgs> ProjectPropertyChanged;
-
-        /// <summary>
-        /// This raises the <see cref="ProjectPropertyChanged"/> event.
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        /// <remarks>This will also mark the project as dirty</remarks>
-        protected void OnProjectPropertyChanged(ProjectPropertyChangedEventArgs e)
-        {
-            var handler = ProjectPropertyChanged;
-
-            if(handler != null)
-                handler(this, e);
-
-            this.MarkAsDirty();
-        }
-
-        /// <summary>
         /// This event is raised when the dirty property changes
         /// </summary>
         public event EventHandler DirtyChanged;
@@ -1990,23 +1931,6 @@ namespace SandcastleBuilder.Utils
         protected void OnDirtyChanged(EventArgs e)
         {
             var handler = DirtyChanged;
-
-            if(handler != null)
-                handler(this, e);
-        }
-
-        /// <summary>
-        /// This event is raised when the assembly list is modified
-        /// </summary>
-        public event EventHandler DocumentationSourcesChanged;
-
-        /// <summary>
-        /// This raises the <see cref="DocumentationSourcesChanged"/> event.
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        protected void OnDocumentationSourcesChanged(EventArgs e)
-        {
-            var handler = DocumentationSourcesChanged;
 
             if(handler != null)
                 handler(this, e);
@@ -2037,21 +1961,6 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This is handled to mark the project as dirty when the list of
-        /// documentation sources changes.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event parameters</param>
-        private void docSources_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            if(!loadingProperties)
-            {
-                this.MarkAsDirty();
-                this.OnDocumentationSourcesChanged(EventArgs.Empty);
-            }
-        }
-
-        /// <summary>
         /// This is handled to mark the project as dirty when the various
         /// collection properties are modified.
         /// </summary>
@@ -2061,46 +1970,6 @@ namespace SandcastleBuilder.Utils
         {
             if(!loadingProperties)
                 this.MarkAsDirty();
-        }
-
-        /// <summary>
-        /// This is used to ensure that the project is editable before a
-        /// sub-property on a project path property object is changed.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void PathProperty_Changing(object sender, EventArgs e)
-        {
-            CancelEventArgs ce = new CancelEventArgs();
-            this.OnQueryEditProjectFile(ce);
-
-            if(ce.Cancel)
-                throw new OperationCanceledException("Project cannot be edited");
-        }
-
-        /// <summary>
-        /// This is used to ensure that path properties are written to the project when one of their
-        /// sub-properties is edited.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void PathProperty_Changed(object sender, EventArgs e)
-        {
-            FilePath changedPath = sender as FilePath;
-            string propName = null;
-
-            if(changedPath == buildLogFile)
-                propName = "BuildLogFile";
-            else if(changedPath == hhcPath)
-                propName = "HtmlHelp1xCompilerPath";
-            else if(changedPath == workingPath)
-                propName = "WorkingPath";
-            else if(changedPath == componentPath)
-                propName = "ComponentPath";
-            else
-                throw new ArgumentException("Unknown path property changed", "sender");
-
-            this.SetProjectProperty(propName, sender);
         }
 
         /// <summary>
@@ -2267,7 +2136,6 @@ namespace SandcastleBuilder.Utils
             finally
             {
                 loadingProperties = false;
-                this.OnDocumentationSourcesChanged(EventArgs.Empty);
             }
         }
 
@@ -2438,13 +2306,6 @@ namespace SandcastleBuilder.Utils
             // Only do the work if this is different to what we had
             if(String.Compare(oldValue, newValue, StringComparison.Ordinal) != 0)
             {
-                // See if the project can be edited.  If not, abort the change by throwing an exception.
-                CancelEventArgs ce = new CancelEventArgs();
-                this.OnQueryEditProjectFile(ce);
-
-                if(ce.Cancel)
-                    throw new OperationCanceledException("Project cannot be edited");
-
                 // Escape the value if necessary
                 escAttr = pdcCache[propertyName].Attributes[typeof(EscapeValueAttribute)] as EscapeValueAttribute;
 
@@ -2455,9 +2316,6 @@ namespace SandcastleBuilder.Utils
 
                 // The cache needs to be refreshed
                 projectPropertyCache = null;
-
-                // Notify everyone of the property change
-                this.OnProjectPropertyChanged(new ProjectPropertyChangedEventArgs(propertyName, oldValue, newValue));
             }
         }
         #endregion
@@ -2475,13 +2333,10 @@ namespace SandcastleBuilder.Utils
             buildVarMatchEval = new MatchEvaluator(this.OnBuildVarMatch);
 
             docSources = new DocumentationSourceCollection(this);
-            docSources.ListChanged += docSources_ListChanged;
+            docSources.ListChanged += ItemList_ListChanged;
 
             namespaceSummaries = new NamespaceSummaryItemCollection(this);
             namespaceSummaries.ListChanged += ItemList_ListChanged;
-
-            references = new ReferenceItemCollection(this);
-            references.ListChanged += ItemList_ListChanged;
 
             componentConfigs = new ComponentConfigurationDictionary(this);
             plugInConfigs = new PlugInConfigurationDictionary(this);
@@ -2881,8 +2736,8 @@ namespace SandcastleBuilder.Utils
 
             foreach(ProjectItem item in msBuildProject.AllEvaluatedItems)
             {
-                if(item.HasMetadata(ProjectElement.LinkPath))
-                    itemPath = item.GetMetadataValue(ProjectElement.LinkPath);
+                if(item.HasMetadata(BuildItemMetadata.LinkPath))
+                    itemPath = item.GetMetadataValue(BuildItemMetadata.LinkPath);
                 else
                     itemPath = item.EvaluatedInclude;
 
@@ -2949,8 +2804,8 @@ namespace SandcastleBuilder.Utils
 
             foreach(ProjectItem item in msBuildProject.AllEvaluatedItems)
             {
-                if(item.HasMetadata(ProjectElement.LinkPath))
-                    itemPath = item.GetMetadataValue(ProjectElement.LinkPath);
+                if(item.HasMetadata(BuildItemMetadata.LinkPath))
+                    itemPath = item.GetMetadataValue(BuildItemMetadata.LinkPath);
                 else
                     itemPath = item.EvaluatedInclude;
 
@@ -3086,15 +2941,68 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This returns true if the project contains items using the
-        /// given build action.
+        /// This returns true if the project contains items using the given build action
         /// </summary>
         /// <param name="buildAction">The build action for which to check</param>
-        /// <returns>True if at least one item has the given build action or
-        /// false if there are no items with the given build action.</returns>
+        /// <returns>True if at least one item has the given build action or false if there are no items with
+        /// the given build action.</returns>
         public bool HasItems(BuildAction buildAction)
         {
             return (msBuildProject.GetItems(buildAction.ToString()).Count != 0);
+        }
+
+        /// <summary>
+        /// This returns an enumerable list of image references contained in the project
+        /// </summary>
+        /// <returns>An enumerable list of image references if any are found in the project</returns>
+        /// <remarks>Only images with IDs are returned</remarks>
+        public IEnumerable<ImageReference> ImagesReferences()
+        {
+            ImageReference imageRef;
+            bool copyToMedia;
+            string id;
+
+            foreach(ProjectItem item in msBuildProject.GetItems(BuildAction.Image.ToString()))
+            {
+                id = item.GetMetadataValue(BuildItemMetadata.ImageId);
+
+                if(!String.IsNullOrWhiteSpace(id))
+                {
+                    imageRef = new ImageReference(new FilePath(item.UnevaluatedInclude, this), id);
+
+                    imageRef.AlternateText = item.GetMetadataValue(BuildItemMetadata.AlternateText);
+
+                    if(!Boolean.TryParse(item.GetMetadataValue(BuildItemMetadata.CopyToMedia), out copyToMedia))
+                        copyToMedia = false;
+
+                    imageRef.CopyToMedia = copyToMedia;
+
+                    yield return imageRef;
+                }
+            }
+        }
+
+        /// <summary>
+        /// This returns an enumerable list of content files of the given type contained in the project
+        /// </summary>
+        /// <param name="buildAction">The build action of the items to retrieve</param>
+        /// <returns>An enumerable list of content files of the given type if any are found in the project</returns>
+        public IEnumerable<ContentFile> ContentFiles(BuildAction buildAction)
+        {
+            ContentFile contentFile;
+            string linkPath;
+
+            foreach(ProjectItem item in msBuildProject.GetItems(buildAction.ToString()))
+            {
+                contentFile = new ContentFile(new FilePath(item.UnevaluatedInclude, this));
+
+                linkPath = item.GetMetadataValue(BuildItemMetadata.LinkPath);
+
+                if(!String.IsNullOrWhiteSpace(linkPath))
+                    contentFile.LinkPath = new FilePath(linkPath, this);
+
+                yield return contentFile;
+            }
         }
 
         /// <summary>

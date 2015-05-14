@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : ConceptualContent.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 04/01/2015
+// Updated : 05/13/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -20,9 +20,14 @@
 // 04/03/2013  EFW  Added support for merging content from another project (plug-in support)
 //===============================================================================================================
 
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Xml;
+
+using Microsoft.Build.Evaluation;
 
 using SandcastleBuilder.Utils.BuildEngine;
 
@@ -36,8 +41,8 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         #region Private data members
         //=====================================================================
 
-        private ImageReferenceCollection imageFiles;
-        private FileItemCollection codeSnippetFiles, tokenFiles, contentLayoutFiles;
+        private List<ImageReference> imageFiles;
+        private List<ContentFile> codeSnippetFiles, tokenFiles, contentLayoutFiles;
         private Collection<TopicCollection> topics;
         #endregion
 
@@ -47,7 +52,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get the conceptual content image files
         /// </summary>
-        public ImageReferenceCollection ImageFiles
+        public IList<ImageReference> ImageFiles
         {
             get { return imageFiles; }
         }
@@ -55,7 +60,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get the conceptual content code snippet files
         /// </summary>
-        public FileItemCollection CodeSnippetFiles
+        public IList<ContentFile> CodeSnippetFiles
         {
             get { return codeSnippetFiles; }
         }
@@ -63,7 +68,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get the conceptual content token files
         /// </summary>
-        public FileItemCollection TokenFiles
+        public IList<ContentFile> TokenFiles
         {
             get { return tokenFiles; }
         }
@@ -71,7 +76,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get the conceptual content layout files
         /// </summary>
-        public FileItemCollection ContentLayoutFiles
+        public IList<ContentFile> ContentLayoutFiles
         {
             get { return contentLayoutFiles; }
         }
@@ -95,13 +100,15 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <param name="project">The project from which to load the settings</param>
         public ConceptualContentSettings(SandcastleProject project)
         {
-            imageFiles = new ImageReferenceCollection(project);
-            codeSnippetFiles = new FileItemCollection(project, BuildAction.CodeSnippets);
-            tokenFiles = new FileItemCollection(project, BuildAction.Tokens);
-            contentLayoutFiles = new FileItemCollection(project, BuildAction.ContentLayout);
+            imageFiles = project.ImagesReferences().ToList();
+            codeSnippetFiles = project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath).ToList();
+            tokenFiles = project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath).ToList();
+            contentLayoutFiles = project.ContentFiles(BuildAction.ContentLayout).ToList();
             topics = new Collection<TopicCollection>();
 
-            foreach(FileItem file in contentLayoutFiles)
+            var clf = new FileItemCollection(project, BuildAction.ContentLayout);
+
+            foreach(FileItem file in clf)
                 topics.Add(new TopicCollection(file));
         }
         #endregion
@@ -131,7 +138,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
             builder.ReportProgress("Checking for other token files...");
 
-            foreach(FileItem tokenFile in this.tokenFiles)
+            foreach(var tokenFile in this.tokenFiles)
                 if(!File.Exists(tokenFile.FullPath))
                 {
                     missingFile = true;
@@ -150,7 +157,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
             builder.ReportProgress("Checking for code snippets files...");
 
-            foreach(FileItem snippetsFile in this.codeSnippetFiles)
+            foreach(var snippetsFile in this.codeSnippetFiles)
                 if(!File.Exists(snippetsFile.FullPath))
                 {
                     missingFile = true;
@@ -174,7 +181,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             builder.ReportProgress("Copying images and creating the media map file...");
 
             // Copy all image project items and create the content file
-            imageFiles.SaveAsSharedContent(builder.WorkingFolder + "_MediaContent_.xml", folder, builder);
+            this.SaveImageSharedContent(builder.WorkingFolder + "_MediaContent_.xml", folder, builder);
 
             // Copy the topic files
             folder = builder.WorkingFolder + "ddueXml";
@@ -193,6 +200,89 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         }
 
         /// <summary>
+        /// Write the image reference collection to a map file ready for use by <strong>BuildAssembler</strong>
+        /// </summary>
+        /// <param name="filename">The file to which the image reference collection is saved</param>
+        /// <param name="imagePath">The path to which the image files should be copied</param>
+        /// <param name="builder">The build process</param>
+        /// <remarks>Images with their <see cref="ImageReference.CopyToMedia" /> property set to true are copied
+        /// to the media folder immediately.</remarks>
+        public void SaveImageSharedContent(string filename, string imagePath, BuildProcess builder)
+        {
+            XmlWriterSettings settings = new XmlWriterSettings();
+            XmlWriter writer = null;
+            string destFile;
+
+            builder.EnsureOutputFoldersExist("media");
+
+            try
+            {
+                settings.Indent = true;
+                settings.CloseOutput = true;
+                writer = XmlWriter.Create(filename, settings);
+
+                writer.WriteStartDocument();
+
+                // There are normally some attributes on this element but they aren't used by Sandcastle so we'll
+                // ignore them.
+                writer.WriteStartElement("stockSharedContentDefinitions");
+
+                foreach(var ir in imageFiles)
+                {
+                    writer.WriteStartElement("item");
+                    writer.WriteAttributeString("id", ir.Id);
+                    writer.WriteStartElement("image");
+
+                    // The art build component assumes everything is in a single, common folder.  The build
+                    // process will ensure that happens.  As such, we only need the filename here.
+                    writer.WriteAttributeString("file", ir.Filename);
+
+                    if(!String.IsNullOrEmpty(ir.AlternateText))
+                    {
+                        writer.WriteStartElement("altText");
+                        writer.WriteValue(ir.AlternateText);
+                        writer.WriteEndElement();
+                    }
+
+                    writer.WriteEndElement();   // </image>
+                    writer.WriteEndElement();   // </item>
+
+                    destFile = Path.Combine(imagePath, ir.Filename);
+
+                    if(File.Exists(destFile))
+                        builder.ReportWarning("BE0010", "Image file '{0}' already exists.  It will be replaced " +
+                            "by '{1}'.", destFile, ir.FullPath);
+
+                    builder.ReportProgress("    {0} -> {1}", ir.FullPath, destFile);
+
+                    // The attributes are set to Normal so that it can be deleted after the build
+                    File.Copy(ir.FullPath, destFile, true);
+                    File.SetAttributes(destFile, FileAttributes.Normal);
+
+                    // Copy it to the output media folders if CopyToMedia is true
+                    if(ir.CopyToMedia)
+                        foreach(string baseFolder in builder.HelpFormatOutputFolders)
+                        {
+                            destFile = Path.Combine(baseFolder + "media", ir.Filename);
+
+                            builder.ReportProgress("    {0} -> {1} (Always copied)", ir.FullPath, destFile);
+
+                            File.Copy(ir.FullPath, destFile, true);
+                            File.SetAttributes(destFile, FileAttributes.Normal);
+                        }
+                }
+
+                writer.WriteEndElement();   // </stockSharedContentDefinitions>
+                writer.WriteEndDocument();
+            }
+            finally
+            {
+                if(writer != null)
+                    writer.Close();
+            }
+        }
+
+        /// <summary>
         /// This is used to create the conceptual content build configuration files
         /// </summary>
         /// <param name="builder">The build process</param>
@@ -205,6 +295,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             this.CreateConceptualManifest(builder);
         }
 
+        // TODO: This can eventually go away as the collections will be exposed as IList<T> properties
         /// <summary>
         /// This method can be used by plug-ins to merge content from another Sandcastle Help File Builder
         /// project file.
@@ -215,21 +306,14 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// the project being built as it may alter the underlying MSBuild project which is not wanted.</remarks>
         public void MergeContentFrom(SandcastleProject project)
         {
-            var otherImageFiles = new ImageReferenceCollection(project);
-            var otherCodeSnippetFiles = new FileItemCollection(project, BuildAction.CodeSnippets);
-            var otherTokenFiles = new FileItemCollection(project, BuildAction.Tokens);
-            var otherContentLayoutFiles = new FileItemCollection(project, BuildAction.ContentLayout);
+            imageFiles.AddRange(project.ImagesReferences());
+            codeSnippetFiles.AddRange(project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath));
+            tokenFiles.AddRange(project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath));
+            contentLayoutFiles.AddRange(project.ContentFiles(BuildAction.ContentLayout));
 
-            foreach(var image in otherImageFiles)
-                imageFiles.Add(image);
+            var clf = new FileItemCollection(project, BuildAction.ContentLayout);
 
-            foreach(var snippets in otherCodeSnippetFiles)
-                codeSnippetFiles.Add(snippets);
-
-            foreach(var tokens in otherTokenFiles)
-                tokenFiles.Add(tokens);
-
-            foreach(FileItem file in otherContentLayoutFiles)
+            foreach(FileItem file in clf)
                 topics.Add(new TopicCollection(file));
         }
 

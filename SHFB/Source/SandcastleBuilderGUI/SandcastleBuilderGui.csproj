@@ -321,6 +321,10 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="MSBuild\COMReferenceItem.cs" />
+    <Compile Include="MSBuild\ProjectReferenceItem.cs" />
+    <Compile Include="MSBuild\ReferenceItem.cs" />
+    <Compile Include="MSBuild\ReferenceItemCollection.cs" />
     <Compile Include="PromptToSaveDlg.cs">
       <SubType>Form</SubType>
     </Compile>

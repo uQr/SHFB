@@ -62,8 +62,6 @@ using System.Web;
 using System.Xml;
 using System.Xml.XPath;
 
-using Microsoft.Build.Evaluation;
-
 using Sandcastle.Core;
 using Sandcastle.Core.BuildAssembler.BuildComponent;
 using Sandcastle.Core.Frameworks;
@@ -77,14 +75,12 @@ namespace SandcastleBuilder.Utils.BuildEngine
         #region Private data members
         //=====================================================================
 
-        // Regular expressions used for encoding detection and parsing
-        private static Regex reXmlEncoding = new Regex("^<\\?xml.*?encoding\\s*=\\s*\"(?<Encoding>.*?)\".*?\\?>");
-
         private static Regex reField = new Regex(@"{@(?<Field>\w*?)(:(?<Format>.*?))?}");
 
         private MatchEvaluator fieldMatchEval;
         #endregion
 
+        // TODO: Remove and use SubstitutionTagReplacements instance
         /// <summary>
         /// Transform the specified template text by inserting the necessary values into the place holders tags
         /// </summary>
@@ -119,6 +115,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             return templateText;
         }
 
+        // TODO: Remove and use SubstitutionTagReplacements instance
         /// <summary>
         /// Transform the specified template by inserting the necessary values into the place holders and saving
         /// it to the working folder.
@@ -151,7 +148,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             {
                 // When reading the file, use the default encoding but
                 // detect the encoding if byte order marks are present.
-                templateText = BuildProcess.ReadWithEncoding(sourceFolder + template, ref enc);
+                templateText = Utility.ReadWithEncoding(sourceFolder + template, ref enc);
 
                 // Use a regular expression to find and replace all field
                 // tags with a matching value from the project.  They can
@@ -180,50 +177,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             return transformedFile;
         }
 
-        /// <summary>
-        /// This is used to read in a file using an appropriate encoding method
-        /// </summary>
-        /// <param name="filename">The file to load</param>
-        /// <param name="encoding">Pass the default encoding to use.  On return, it contains the actual encoding
-        /// for the file.</param>
-        /// <returns>The contents of the file.</returns>
-        /// <remarks>When reading the file, use the default encoding specified but detect the encoding if byte
-        /// order marks are present.  In addition, if the template is an XML file and it contains an encoding
-        /// identifier in the XML tag, the file is read using that encoding.</remarks>
-        public static string ReadWithEncoding(string filename, ref Encoding encoding)
-        {
-            Encoding fileEnc;
-            string content;
-
-            using(StreamReader sr = new StreamReader(filename, encoding, true))
-            {
-                content = sr.ReadToEnd();
-
-                // Get the actual encoding used
-                encoding = sr.CurrentEncoding;
-            }
-
-            Match m = reXmlEncoding.Match(content);
-
-            // Re-read an XML file using the correct encoding?
-            if(m.Success)
-            {
-                fileEnc = Encoding.GetEncoding(m.Groups["Encoding"].Value);
-
-                if(fileEnc != encoding)
-                {
-                    encoding = fileEnc;
-
-                    using(StreamReader sr = new StreamReader(filename, encoding, true))
-                    {
-                        content = sr.ReadToEnd();
-                    }
-                }
-            }
-
-            return content;
-        }
-
+        // TODO: Remove and use SubstitutionTagReplacements instance
         /// <summary>
         /// Replace a field tag with a value from the project
         /// </summary>
@@ -231,8 +185,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// <returns>The string to use as the replacement</returns>
         private string OnFieldMatch(Match match)
         {
-            ProjectProperty buildProp;
-            FileItemCollection fileItems;
             StringBuilder sb;
             string replaceWith, fieldName;
 
@@ -240,101 +192,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
             switch(fieldName)
             {
-                case "appdatafolder":
-                    // This folder should exist if used
-                    replaceWith = FolderPath.TerminatePath(Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                        Constants.ProgramDataFolder));
-                    break;
-
-                case "localdatafolder":
-                    // This folder may not exist and we may need to create it
-                    replaceWith = FolderPath.TerminatePath(Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        Constants.ProgramDataFolder));
-
-                    if(!Directory.Exists(replaceWith))
-                        Directory.CreateDirectory(replaceWith);
-                    break;
-
-                case "shfbfolder":
-                    replaceWith = ComponentUtilities.ToolsFolder;
-                    break;
-
-                case "componentsfolder":
-                    replaceWith = ComponentUtilities.ComponentsFolder;
-                    break;
-
-                case "projectfolder":
-                    replaceWith = Path.GetDirectoryName(originalProjectName);
-
-                    if(replaceWith.Length == 0)
-                        replaceWith = Directory.GetCurrentDirectory();
-
-                    replaceWith += @"\";
-                    break;
-
-                case "htmlencprojectfolder":
-                    replaceWith = HttpUtility.HtmlEncode(Path.GetDirectoryName(originalProjectName));
-
-                    if(replaceWith.Length == 0)
-                        replaceWith = HttpUtility.HtmlEncode(Directory.GetCurrentDirectory());
-
-                    replaceWith += @"\";
-                    break;
-
-                case "outputfolder":
-                    replaceWith = outputFolder;
-                    break;
-
-                case "htmlencoutputfolder":
-                    replaceWith = HttpUtility.HtmlEncode(outputFolder);
-                    break;
-
-                case "workingfolder":
-                    replaceWith = workingFolder;
-                    break;
-
-                case "htmlencworkingfolder":
-                    replaceWith = HttpUtility.HtmlEncode(workingFolder);
-                    break;
-
-                case "presentationpath":
-                    replaceWith = FolderPath.TerminatePath(this.PresentationStyleFolder);
-                    break;
-
-                case "presentationstyle":
-                    replaceWith = project.PresentationStyle;
-                    break;
-
-                case "docmodeltransformation":
-                    replaceWith = presentationStyle.ResolvePath(
-                        presentationStyle.DocumentModelTransformation.TransformationFilename);
-                    break;
-
-                case "docmodeltransformationparameters":
-                    replaceWith = String.Join(";", presentationStyle.DocumentModelTransformation.Select(p =>
-                        String.Format(CultureInfo.InvariantCulture, "{0}={1}", p.Key, p.Value)));
-                    break;
-
-                case "namingmethod":
-                    replaceWith = project.NamingMethod.ToString();
-                    break;
-
-                case "toctransformation":
-                    replaceWith = presentationStyle.ResolvePath(
-                        presentationStyle.IntermediateTocTransformation.TransformationFilename);
-                    break;
-
-                case "toctransformparameters":
-                    replaceWith = String.Join(";", presentationStyle.IntermediateTocTransformation.Select(p =>
-                        String.Format(CultureInfo.InvariantCulture, "{0}={1}", p.Key, p.Value)));
-                    break;
-
-                case "hhcpath":
-                    replaceWith = hhcFolder;
-                    break;
-
                 case "disablecodeblockcomponent":
                     replaceWith = project.DisableCodeBlockComponent.ToString().ToLowerInvariant();
                     break;
@@ -793,12 +650,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 case "tokenfiles":
                     sb = new StringBuilder(1024);
 
-                    if(conceptualContent != null)
-                        fileItems = conceptualContent.TokenFiles;
-                    else
-                        fileItems = new FileItemCollection(project, BuildAction.Tokens);
-
-                    foreach(FileItem file in fileItems)
+                    foreach(var file in this.ConceptualContent.TokenFiles)
                         sb.AppendFormat("<content file=\"{0}\" />\r\n", Path.GetFileName(file.FullPath));
 
                     replaceWith = sb.ToString();
@@ -807,12 +659,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 case "codesnippetsfiles":
                     sb = new StringBuilder(1024);
 
-                    if(conceptualContent != null)
-                        fileItems = conceptualContent.CodeSnippetFiles;
-                    else
-                        fileItems = new FileItemCollection(project, BuildAction.CodeSnippets);
-
-                    foreach(FileItem file in fileItems)
+                    foreach(var file in this.ConceptualContent.CodeSnippetFiles)
                         sb.AppendFormat("<examples file=\"{0}\" />\r\n", file.FullPath);
 
                     replaceWith = sb.ToString();
@@ -820,8 +667,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 case "resourceitemfiles":
                     sb = new StringBuilder(1024);
-
-                    fileItems = new FileItemCollection(project, BuildAction.ResourceItems);
 
                     // Add syntax generator resource item files.  All languages are included regardless of the
                     // project filter settings since code examples can be in any language.  Files are copied and
@@ -836,7 +681,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     }
 
                     // Add project resource item files last so that they override all other files
-                    foreach(FileItem file in fileItems)
+                    foreach(var file in project.ContentFiles(BuildAction.ResourceItems).OrderBy(f => f.LinkPath))
                     {
                         sb.AppendFormat("<content file=\"{0}\" />\r\n", Path.GetFileName(file.FullPath));
 
@@ -850,9 +695,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 case "xamlconfigfiles":
                     sb = new StringBuilder(1024);
 
-                    fileItems = new FileItemCollection(project, BuildAction.XamlConfiguration);
-
-                    foreach(FileItem file in fileItems)
+                    foreach(var file in project.ContentFiles(BuildAction.XamlConfiguration))
                         sb.AppendFormat("<filter files=\"{0}\" />\r\n", file.FullPath);
 
                     replaceWith = sb.ToString();
@@ -941,7 +784,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     if(!String.IsNullOrEmpty(this.ApiTocParentId) && this.ApiTocParentId[0] != '*')
                     {
                         // Ensure that the ID is valid and visible in the TOC
-                        if(!conceptualContent.Topics.Any(t => t[this.ApiTocParentId] != null &&
+                        if(!this.ConceptualContent.Topics.Any(t => t[this.ApiTocParentId] != null &&
                           t[this.ApiTocParentId].Visible))
                             throw new BuilderException("BE0022", String.Format(CultureInfo.CurrentCulture,
                                 "The project's ApiTocParent property value '{0}' must be associated with a topic in " +
@@ -1014,32 +857,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
                         "version release notes for information on breaking changes that require this update.");
 
                 default:
-                    // Try for a custom project property.  Use the last one since the original may be
-                    // in a parent project file or it may have been overridden from the command line.
-                    buildProp = project.MSBuildProject.AllEvaluatedProperties.LastOrDefault(
-                        p => p.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
-
-                    if(buildProp != null)
-                        replaceWith = buildProp.EvaluatedValue;
-                    else
-                    {
-                        // If not there, try the global properties.  If still not found, give up.
-                        string key = project.MSBuildProject.GlobalProperties.Keys.FirstOrDefault(
-                            k => k.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
-
-                        if(key == null || !project.MSBuildProject.GlobalProperties.TryGetValue(key, out replaceWith))
-                            switch(fieldName)
-                            {
-                                case "referencepath":       // Ignore these and use an empty string
-                                case "outdir":
-                                    replaceWith = String.Empty;
-                                    break;
-
-                                default:
-                                    throw new BuilderException("BE0020", String.Format(CultureInfo.CurrentCulture,
-                                        "Unknown field tag: '{0}'", match.Groups["Field"].Value));
-                            }
-                    }
+                    // TODO: This will go away once all tags are handled
+                    replaceWith = substitutionTags.OnFieldMatch(match);
                     break;
             }
 
@@ -1116,7 +935,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             config.Save(configName);
 
             // Do the same for conceptual.config if necessary
-            if(conceptualContent.ContentLayoutFiles.Count != 0)
+            if(this.ConceptualContent.ContentLayoutFiles.Count != 0)
             {
                 configName = workingFolder + "conceptual.config";
                 this.ReportProgress(configName);
@@ -1127,7 +946,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 this.MergeConfigurations(config, true);
 
                 // Remove the example component if there are no snippets file
-                if(conceptualContent.CodeSnippetFiles.Count == 0)
+                if(this.ConceptualContent.CodeSnippetFiles.Count == 0)
                 {
                     this.ReportProgress("    Removing unused ExampleComponent.");
 

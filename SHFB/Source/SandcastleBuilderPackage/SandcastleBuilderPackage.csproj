@@ -379,7 +379,6 @@
       <DependentUpon>AboutDlg.cs</DependentUpon>
     </Compile>
     <Compile Include="Utility.cs" />
-    <Compile Include="Wizards\NewFromOtherFormatWizard.cs" />
     <Content Include="..\License.rtf">
       <Link>License.rtf</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -414,12 +413,6 @@
     <None Include="Templates\ReadMe.txt" />
     <!-- Each ZipProject must contain a RootPath element to define the root path used to group the project files
          into the same template archive. -->
-    <ZipProject Include="Templates\Projects\NewFromOtherFormat\NewFromOtherFormat.shfbproj">
-      <RootPath>Templates\Projects\NewFromOtherFormat</RootPath>
-    </ZipProject>
-    <ZipProject Include="Templates\Projects\NewFromOtherFormat\NewFromOtherFormat.vstemplate">
-      <RootPath>Templates\Projects\NewFromOtherFormat</RootPath>
-    </ZipProject>
     <ZipProject Include="Templates\Projects\SandcastleBuilderProject\SandcastleBuilder.shfbproj">
       <RootPath>Templates\Projects\SandcastleBuilderProject</RootPath>
     </ZipProject>

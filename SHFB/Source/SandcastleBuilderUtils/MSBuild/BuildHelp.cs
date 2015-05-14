@@ -332,12 +332,12 @@ namespace SandcastleBuilder.Utils.MSBuild
                         msBuildProject = new Project(this.ProjectFile);
                     }
 
-                    msBuildProject.SetGlobalProperty(ProjectElement.Configuration, this.Configuration);
-                    msBuildProject.SetGlobalProperty(ProjectElement.Platform, this.Platform);
+                    msBuildProject.SetGlobalProperty(BuildItemMetadata.Configuration, this.Configuration);
+                    msBuildProject.SetGlobalProperty(BuildItemMetadata.Platform, this.Platform);
 
                     // Override the OutDir property if defined for Team Build.  Ignore ".\" as that's our default.
                     if(!String.IsNullOrEmpty(this.OutDir) && this.OutDir != @".\")
-                        msBuildProject.SetGlobalProperty(ProjectElement.OutDir, this.OutDir);
+                        msBuildProject.SetGlobalProperty(BuildItemMetadata.OutDir, this.OutDir);
 
                     msBuildProject.ReevaluateIfNecessary();
                 }

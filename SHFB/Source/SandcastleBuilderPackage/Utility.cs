@@ -2,14 +2,14 @@
 // System  : Sandcastle Help File Builder Visual Studio Package
 // File    : Utility.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 12/20/2014
-// Note    : Copyright 2011-2014, Eric Woodruff, All rights reserved
+// Updated : 05/13/2015
+// Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a utility class with extension and utility methods.
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
-// distributed with the code.  It can also be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
@@ -32,7 +32,7 @@ using Microsoft.VisualStudio.Project;
 using Microsoft.VisualStudio.Shell.Interop;
 
 using SandcastleBuilder.Package.Properties;
-using SandcastleBuilderProjectElement = SandcastleBuilder.Utils.ProjectElement;
+using SandcastleBuildItemMetadata = SandcastleBuilder.Utils.BuildItemMetadata;
 
 namespace SandcastleBuilder.Package
 {
@@ -97,13 +97,13 @@ namespace SandcastleBuilder.Package
         {
             string baseName = Path.GetFileNameWithoutExtension(element.GetMetadata(ProjectFileConstants.Include));
 
-            if(String.IsNullOrEmpty(element.GetMetadata(SandcastleBuilderProjectElement.ImageId)))
-                element.SetMetadata(SandcastleBuilderProjectElement.ImageId, baseName);
+            if(String.IsNullOrEmpty(element.GetMetadata(SandcastleBuildItemMetadata.ImageId)))
+                element.SetMetadata(SandcastleBuildItemMetadata.ImageId, baseName);
 
-            if(String.IsNullOrEmpty(element.GetMetadata(SandcastleBuilderProjectElement.AlternateText)))
+            if(String.IsNullOrEmpty(element.GetMetadata(SandcastleBuildItemMetadata.AlternateText)))
             {
                 baseName = baseName.Replace("_", " ");
-                element.SetMetadata(SandcastleBuilderProjectElement.AlternateText,
+                element.SetMetadata(SandcastleBuildItemMetadata.AlternateText,
                     reInsertSpaces.Replace(baseName, " $&").Trim());
             }
         }

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/09/2015
+// Updated : 05/10/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -156,6 +156,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
         // The current reflection information file used in various steps
         private XmlDocument reflectionInfo;
         private XmlNode apisNode;
+
+        // Substitution tag replacement handler
+        private SubstitutionTagReplacement substitutionTags;
 
         // Regular expressions used for error message checking
         private static Regex reErrorCheck = new Regex(@"^\s*((Error|UnrecognizedOption|Unhandled Exception|" +
@@ -395,6 +398,14 @@ namespace SandcastleBuilder.Utils.BuildEngine
         public Collection<string> MarkdownFiles
         {
             get { return markdownFiles; }
+        }
+
+        /// <summary>
+        /// This returns the substitution tag replacement handler instance
+        /// </summary>
+        public SubstitutionTagReplacement SubsitutionTags
+        {
+            get { return substitutionTags; }
         }
 
         /// <summary>
@@ -776,6 +787,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
                         "help file formats.  Supported formats: {1}", style.Metadata.Id,
                         presentationStyle.SupportedFormats));
 
+                // Create the substitution tag replacement handler now as we have everything it needs
+                substitutionTags = new SubstitutionTagReplacement(this);
+
                 // Load the plug-ins if necessary
                 if(project.PlugInConfigurations.Count != 0 || presentationStyle.PlugInDependencies.Count != 0)
                     this.LoadPlugIns();
@@ -937,9 +951,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                             // Make sure hint paths are correct by adding the project folder to any relative
                             // paths.  Skip any containing MSBuild variable references.
-                            if(projectItem.HasMetadata(ProjectElement.HintPath))
+                            if(projectItem.HasMetadata(BuildItemMetadata.HintPath))
                             {
-                                hintPath = projectItem.GetMetadataValue(ProjectElement.HintPath);
+                                hintPath = projectItem.GetMetadataValue(BuildItemMetadata.HintPath);
 
                                 if(!Path.IsPathRooted(hintPath) && hintPath.IndexOf("$(",
                                   StringComparison.Ordinal) == -1)
@@ -951,7 +965,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                                     if(hintPath.Length > 259 || Path.GetDirectoryName(hintPath).Length > 247)
                                         hintPath = FolderPath.AbsoluteToRelativePath(workingFolder, hintPath);
 
-                                    projectItem.SetMetadataValue(ProjectElement.HintPath, hintPath);
+                                    projectItem.SetMetadataValue(BuildItemMetadata.HintPath, hintPath);
                                 }
                             }
                         }
@@ -1066,17 +1080,14 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 // Copy conceptual content files if there are topics or tokens.  Tokens can be replaced in
                 // XML comments files so we check for them too.
-                if(conceptualContent == null)
-                    conceptualContent = new ConceptualContentSettings(project);
-
-                if(conceptualContent.ContentLayoutFiles.Count != 0 || conceptualContent.TokenFiles.Count != 0)
+                if(this.ConceptualContent.ContentLayoutFiles.Count != 0 || this.ConceptualContent.TokenFiles.Count != 0)
                 {
                     this.ReportProgress(BuildStep.CopyConceptualContent, "Copying conceptual content...");
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
-                        conceptualContent.CopyContentFiles(this);
+                        this.ConceptualContent.CopyContentFiles(this);
                         this.ExecutePlugIns(ExecutionBehaviors.After);
                     }
 
@@ -1086,7 +1097,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
-                        conceptualContent.CreateConfigurationFiles(this);
+                        this.ConceptualContent.CreateConfigurationFiles(this);
                         this.ExecutePlugIns(ExecutionBehaviors.After);
                     }
                 }
@@ -1198,7 +1209,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                         File.Move(workingFolder + Path.GetFileName(resolvedPath), workingFolder + "sandcastle.config");
 
                     // The conceptual content configuration file is only created if needed.
-                    if(conceptualContent.ContentLayoutFiles.Count != 0)
+                    if(this.ConceptualContent.ContentLayoutFiles.Count != 0)
                     {
                         this.ReportProgress("    conceptual.config");
 
@@ -1224,7 +1235,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 this.GarbageCollect();
 
                 // Build the conceptual help topics
-                if(conceptualContent.ContentLayoutFiles.Count != 0)
+                if(this.ConceptualContent.ContentLayoutFiles.Count != 0)
                 {
                     this.ReportProgress(BuildStep.BuildConceptualTopics, "Building conceptual help topics...");
 
@@ -2186,7 +2197,7 @@ AllDone:
             foreach(ProjectItem reference in project.MSBuildProject.GetItems("ProjectReference"))
             {
                 // Ignore references used only for MSBuild dependency determination
-                var refOutput = reference.GetMetadata(ProjectElement.ReferenceOutputAssembly);
+                var refOutput = reference.GetMetadata(BuildItemMetadata.ReferenceOutputAssembly);
 
                 if(refOutput != null && refOutput.EvaluatedValue.Equals("false", StringComparison.OrdinalIgnoreCase))
                 {
@@ -2341,9 +2352,9 @@ AllDone:
                                 "Unable to obtain assembly name from project file '{0}' using Configuration " +
                                 "'{1}', Platform '{2}'", msbProject.ProjectFile.FullPath,
                                 msbProject.ProjectFile.AllEvaluatedProperties.Last(
-                                    p => p.Name == ProjectElement.Configuration).EvaluatedValue,
+                                    p => p.Name == BuildItemMetadata.Configuration).EvaluatedValue,
                                 msbProject.ProjectFile.AllEvaluatedProperties.Last(
-                                    p => p.Name == ProjectElement.Platform).EvaluatedValue));
+                                    p => p.Name == BuildItemMetadata.Platform).EvaluatedValue));
 
                         workingPath = msbProject.XmlCommentsFile;
 

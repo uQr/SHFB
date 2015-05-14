@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : TopicCollection.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/07/2015
+// Updated : 05/13/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -53,14 +53,6 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
         #region Properties
         //=====================================================================
-
-        /// <summary>
-        /// This read-only property returns the project file item associated with the collection
-        /// </summary>
-        public FileItem FileItem
-        {
-            get { return fileItem; }
-        }
 
         /// <summary>
         /// This is used to get the default topic
@@ -439,7 +431,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
                         // When reading the file, use the default encoding but
                         // detect the encoding if byte order marks are present.
-                        templateText = BuildProcess.ReadWithEncoding(builder.TemplateFolder +
+                        templateText = Utility.ReadWithEncoding(builder.TemplateFolder +
                             "PlaceHolderNode.aml", ref enc);
                             
                         templateText = templateText.Replace("{@GUID}", t.Id);

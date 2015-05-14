@@ -68,7 +68,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 if(comments == null)
                 {
                     enc = Encoding.UTF8;
-                    BuildProcess.ReadWithEncoding(sourcePath, ref enc);
+                    Utility.ReadWithEncoding(sourcePath, ref enc);
                 }
 
                 return enc;
@@ -94,7 +94,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     do
                     {
                         // Read it with the appropriate encoding
-                        content = BuildProcess.ReadWithEncoding(sourcePath, ref enc);
+                        content = Utility.ReadWithEncoding(sourcePath, ref enc);
                         comments.LoadXml(content);
 
                         // If redirected, load the specified file

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder WPF Controls
 // File    : EntityReferencesControl.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/20/2015
+// Updated : 05/13/2015
 // Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -14,16 +14,17 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.9.3.3  12/04/2011  EFW  Created the code
-// 1.9.6.0  12/08/2012  EFW  Added support for XML comments conceptualLink TOC entry format
+// 12/04/2011  EFW  Created the code
+// 12/08/2012  EFW  Added support for XML comments conceptualLink TOC entry format
 //===============================================================================================================
 
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -154,7 +155,6 @@ namespace SandcastleBuilder.WPF.UserControls
         /// </summary>
         private List<EntityReference> LoadTokenInfo()
         {
-            FileItemCollection tokenFiles;
             EntityReference tokenFileEntity = null;
             TokenCollection tokenColl;
 
@@ -164,13 +164,12 @@ namespace SandcastleBuilder.WPF.UserControls
             tokens = new List<EntityReference>();
 
             currentProject.EnsureProjectIsCurrent(false);
-            tokenFiles = new FileItemCollection(currentProject, BuildAction.Tokens);
 
             // Get content from open file editors
             var args = new FileContentNeededEventArgs(FileContentNeededEvent, this);
             base.RaiseEvent(args);
 
-            foreach(FileItem tokenFile in tokenFiles)
+            foreach(var tokenFile in currentProject.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath))
                 try
                 {
                     if(File.Exists(tokenFile.FullPath))
@@ -244,27 +243,22 @@ namespace SandcastleBuilder.WPF.UserControls
         /// </summary>
         private List<EntityReference> LoadImageInfo()
         {
-            ImageReferenceCollection imagesRefs;
-
             if(images != null)
                 return images;
 
             images = new List<EntityReference>();
 
             currentProject.EnsureProjectIsCurrent(false);
-            imagesRefs = new ImageReferenceCollection(currentProject);
 
-            foreach(ImageReference ir in imagesRefs)
-                if(!String.IsNullOrEmpty(ir.Id))
-                    images.Add(new EntityReference
-                    {
-                        EntityType = EntityType.Image,
-                        Id = ir.Id,
-                        Label = ir.DisplayTitle,
-                        ToolTip = String.Format(CultureInfo.CurrentCulture, "ID: {0}\nFile: {1}",
-                            ir.Id, ir.FullPath),
-                        Tag = ir
-                    });
+            foreach(var ir in currentProject.ImagesReferences().OrderBy(i => i.DisplayTitle).ThenBy(i => i.Id))
+                images.Add(new EntityReference
+                {
+                    EntityType = EntityType.Image,
+                    Id = ir.Id,
+                    Label = ir.DisplayTitle,
+                    ToolTip = String.Format(CultureInfo.CurrentCulture, "ID: {0}\nFile: {1}", ir.Id, ir.FullPath),
+                    Tag = ir
+                });
 
             if(images.Count != 0)
                 images[0].IsSelected = true;
@@ -440,7 +434,6 @@ namespace SandcastleBuilder.WPF.UserControls
         /// </summary>
         private List<EntityReference> LoadCodeSnippetInfo()
         {
-            FileItemCollection codeSnippetFiles;
             EntityReference snippetFileEntity = null;
             XPathDocument snippets;
             XPathNavigator navSnippets;
@@ -452,9 +445,8 @@ namespace SandcastleBuilder.WPF.UserControls
             codeSnippets = new List<EntityReference>();
 
             currentProject.EnsureProjectIsCurrent(false);
-            codeSnippetFiles = new FileItemCollection(currentProject, BuildAction.CodeSnippets);
 
-            foreach(FileItem snippetFile in codeSnippetFiles)
+            foreach(var snippetFile in currentProject.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath))
                 try
                 {
                     if(File.Exists(snippetFile.FullPath))

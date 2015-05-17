@@ -2,8 +2,8 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : MSHelpAttrCollection.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 08/24/2014
-// Note    : Copyright 2008-2014, Eric Woodruff, All rights reserved
+// Updated : 05/15/2015
+// Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a collection class used to hold the help attribute information
@@ -13,12 +13,11 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.6.0.7  03/25/2008  EFW  Created the code
-// 1.8.0.0  07/03/2008  EFW  Rewrote to support MSBuild project format
-// 1.9.3.0  04/07/2011  EFW  Made the constructor and from/to XML members public so that it can be used from the
-//                           VSPackage.
+// 03/25/2008  EFW  Created the code
+// 07/03/2008  EFW  Rewrote to support MSBuild project format
+// 04/07/2011  EFW  Made the constructor and from/to XML members public so that it can be used from the VSPackage
 //===============================================================================================================
 
 using System.Collections.Generic;
@@ -35,55 +34,8 @@ namespace SandcastleBuilder.Utils
     /// </summary>
     public class MSHelpAttrCollection : BindingList<MSHelpAttr>
     {
-        #region Private data members
-        //=====================================================================
-
-        private SandcastleProject projectFile;
-        private bool isDirty;
-        #endregion
-
-        #region Properties
-        //=====================================================================
-
-        /// <summary>
-        /// This is used to get or set the dirty state of the collection
-        /// </summary>
-        public bool IsDirty
-        {
-            get
-            {
-                foreach(MSHelpAttr attr in this)
-                    if(attr.IsDirty)
-                        return true;
-
-                return isDirty;
-            }
-            set
-            {
-                foreach(MSHelpAttr attr in this)
-                    attr.IsDirty = value;
-
-                isDirty = value;
-            }
-        }
-        #endregion
-
-        #region Constructor
-        //=====================================================================
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="project">The project that owns the collection or null for a standalone collection</param>
-        public MSHelpAttrCollection(SandcastleProject project)
-        {
-            projectFile = project;
-        }
-        #endregion
-
         #region Sort collection
         //=====================================================================
-        // Sort the collection
 
         /// <summary>
         /// This is used to sort the collection
@@ -105,29 +57,19 @@ namespace SandcastleBuilder.Utils
         /// <remarks>The information is stored as an XML fragment</remarks>
         public void FromXml(string helpAttrs)
         {
-            XmlTextReader xr = null;
-
-            try
+            using(var xr = new XmlTextReader(helpAttrs, XmlNodeType.Element,
+              new XmlParserContext(null, null, null, XmlSpace.Default)))
             {
-                xr = new XmlTextReader(helpAttrs, XmlNodeType.Element,
-                    new XmlParserContext(null, null, null, XmlSpace.Default));
                 xr.MoveToContent();
 
                 this.ReadXml(xr);
-            }
-            finally
-            {
-                if(xr != null)
-                    xr.Close();
-
-                isDirty = false;
             }
         }
 
         /// <summary>
         /// Load the help attributes from the given XML text reader
         /// </summary>
-        /// <param name="xr"></param>
+        /// <param name="xr">The XML reader to use</param>
         internal void ReadXml(XmlReader xr)
         {
             while(!xr.EOF && xr.NodeType != XmlNodeType.EndElement)
@@ -197,7 +139,7 @@ namespace SandcastleBuilder.Utils
         /// items and can associate them with the project.</remarks>
         public MSHelpAttr Add(string name, string value)
         {
-            MSHelpAttr item = new MSHelpAttr(name, value, projectFile);
+            MSHelpAttr item = new MSHelpAttr(name, value);
 
             if(!this.Contains(item))
                 base.Add(item);
@@ -225,32 +167,6 @@ namespace SandcastleBuilder.Utils
             sb.Append("</attributes>\r\n");
 
             return sb.ToString();
-        }
-        #endregion
-
-        #region Method overrides
-        //=====================================================================
-
-        /// <summary>
-        /// This is used to mark the collection as changed when there is no associated project
-        /// </summary>
-        public void MarkAsDirty()
-        {
-            if(projectFile == null)
-            {
-                isDirty = true;
-                this.OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
-            }
-        }
-
-        /// <summary>
-        /// This is overridden to mark the collection as dirty when it changes
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        protected override void OnListChanged(ListChangedEventArgs e)
-        {
-            isDirty = true;
-            base.OnListChanged(e);
         }
         #endregion
     }

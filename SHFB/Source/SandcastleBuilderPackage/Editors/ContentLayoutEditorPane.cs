@@ -116,14 +116,14 @@ namespace SandcastleBuilder.Package.Editors
         {
             Topic newTopic = null, currentTopic = base.UIControl.CurrentTopic;
             string newPath = filename, projectPath = Path.GetDirectoryName(
-                contentLayoutFile.ProjectElement.Project.Filename);
+                contentLayoutFile.Project.Filename);
 
             // The file must reside under the project path
             if(!Path.GetDirectoryName(filename).StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
                 newPath = Path.Combine(projectPath, Path.GetFileName(filename));
 
             // Add the file to the project if not already there
-            FileItem newItem = contentLayoutFile.ProjectElement.Project.AddFileToProject(filename, newPath);
+            FileItem newItem = contentLayoutFile.Project.AddFileToProject(filename, newPath);
 
             // Add the topic to the editor's collection
             newTopic = new Topic
@@ -186,7 +186,7 @@ namespace SandcastleBuilder.Package.Editors
 
             if(base.IsDirty || !fileName.Equals(contentLayoutFile.FullPath, StringComparison.OrdinalIgnoreCase))
             {
-                contentLayoutFile.Include = new FilePath(fileName, contentLayoutFile.ProjectElement.Project);
+                contentLayoutFile.IncludePath = new FilePath(fileName, contentLayoutFile.Project);
                 base.UIControl.Topics.Save();
             }
         }
@@ -215,7 +215,7 @@ namespace SandcastleBuilder.Package.Editors
             FileNode thisNode = this.FileNode;
             FileItem newItem;
             Topic t = base.UIControl.CurrentTopic;
-            string newPath, projectPath = Path.GetDirectoryName(contentLayoutFile.ProjectElement.Project.Filename);
+            string newPath, projectPath = Path.GetDirectoryName(contentLayoutFile.Project.Filename);
 
             if(t != null)
                 using(WinFormsOpenFileDialog dlg = new WinFormsOpenFileDialog())
@@ -235,7 +235,7 @@ namespace SandcastleBuilder.Package.Editors
                             newPath = Path.Combine(projectPath, Path.GetFileName(newPath));
 
                         // Add the file to the project if not already there
-                        newItem = contentLayoutFile.ProjectElement.Project.AddFileToProject(
+                        newItem = contentLayoutFile.Project.AddFileToProject(
                             dlg.FileName, newPath);
 
                         t.TopicFile = new TopicFile(newItem);
@@ -348,7 +348,7 @@ namespace SandcastleBuilder.Package.Editors
         {
             FileNode thisNode = this.FileNode;
             Topic t = base.UIControl.CurrentTopic;
-            string projectPath = Path.GetDirectoryName(contentLayoutFile.ProjectElement.Project.Filename);
+            string projectPath = Path.GetDirectoryName(contentLayoutFile.Project.Filename);
 
             using(WinFormsOpenFileDialog dlg = new WinFormsOpenFileDialog())
             {
@@ -387,7 +387,7 @@ namespace SandcastleBuilder.Package.Editors
             FileNode thisNode = this.FileNode;
             TopicCollection parent, newTopics = new TopicCollection(null);
             Topic selectedTopic = base.UIControl.CurrentTopic;
-            string projectPath = Path.GetDirectoryName(contentLayoutFile.ProjectElement.Project.Filename);
+            string projectPath = Path.GetDirectoryName(contentLayoutFile.Project.Filename);
             int idx;
 
             using(WinFormsFolderBrowserDialog dlg = new WinFormsFolderBrowserDialog())
@@ -401,7 +401,7 @@ namespace SandcastleBuilder.Package.Editors
                     Utility.GetServiceFromPackage<IVsUIShell, SVsUIShell>(true).SetWaitCursor();
 
                     newTopics.AddTopicsFromFolder(dlg.SelectedPath, dlg.SelectedPath,
-                        contentLayoutFile.ProjectElement.Project);
+                        contentLayoutFile.Project);
 
                     if(thisNode != null)
                         thisNode.ProjectMgr.RefreshProject();

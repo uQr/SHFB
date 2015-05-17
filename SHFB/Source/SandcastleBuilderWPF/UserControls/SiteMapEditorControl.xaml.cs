@@ -380,7 +380,7 @@ namespace SandcastleBuilder.WPF.UserControls
         private void cmdAddItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             TocEntry currentTopic = this.CurrentTopic,
-                newTopic = new TocEntry(topics.ContentLayoutFile.ProjectElement.Project)
+                newTopic = new TocEntry(topics.ContentLayoutFile.Project)
                 {
                     Title = "Table of Contents Container",
                     UniqueId = Guid.NewGuid()

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : ContentFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/15/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -67,7 +67,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             if(String.IsNullOrWhiteSpace(fullPath))
                 throw new ArgumentException("A full path to the content file is required", "fullPath");
 
-            this.FullPath = Path.GetFullPath(fullPath);
+            this.FullPath = this.LinkPath = Path.GetFullPath(fullPath);
         }
         #endregion
     }

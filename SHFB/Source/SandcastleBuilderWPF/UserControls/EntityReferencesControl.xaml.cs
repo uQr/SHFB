@@ -163,8 +163,6 @@ namespace SandcastleBuilder.WPF.UserControls
 
             tokens = new List<EntityReference>();
 
-            currentProject.EnsureProjectIsCurrent(false);
-
             // Get content from open file editors
             var args = new FileContentNeededEventArgs(FileContentNeededEvent, this);
             base.RaiseEvent(args);
@@ -248,9 +246,7 @@ namespace SandcastleBuilder.WPF.UserControls
 
             images = new List<EntityReference>();
 
-            currentProject.EnsureProjectIsCurrent(false);
-
-            foreach(var ir in currentProject.ImagesReferences().OrderBy(i => i.DisplayTitle).ThenBy(i => i.Id))
+            foreach(var ir in currentProject.ImagesReferences.OrderBy(i => i.DisplayTitle).ThenBy(i => i.Id))
                 images.Add(new EntityReference
                 {
                     EntityType = EntityType.Image,
@@ -294,8 +290,6 @@ namespace SandcastleBuilder.WPF.UserControls
             try
             {
                 // Get the content layout and site map files
-                currentProject.EnsureProjectIsCurrent(false);
-
                 contentLayoutFiles = new FileItemCollection(currentProject, BuildAction.ContentLayout);
                 siteMapFiles = new FileItemCollection(currentProject, BuildAction.SiteMap);
                 tocFiles = new List<ITableOfContents>();
@@ -444,8 +438,6 @@ namespace SandcastleBuilder.WPF.UserControls
 
             codeSnippets = new List<EntityReference>();
 
-            currentProject.EnsureProjectIsCurrent(false);
-
             foreach(var snippetFile in currentProject.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath))
                 try
                 {
@@ -590,8 +582,6 @@ namespace SandcastleBuilder.WPF.UserControls
             IndexedCommentsCache cache = new IndexedCommentsCache(100);
             MSBuildProject projRef;
             string lastSolution = null;
-
-            currentProject.EnsureProjectIsCurrent(false);
 
             // Index the framework comments based on the framework version in the project
             FrameworkSettings frameworkSettings = FrameworkDictionary.AllFrameworks.GetFrameworkWithRedirect(

@@ -2,24 +2,23 @@
 // System  : EWSoftware Design Time Attributes and Editors
 // File    : ApiFilterEditorDlg.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 08/24/2014
-// Note    : Copyright 2007-2014, Eric Woodruff, All rights reserved
+// Updated : 05/15/2015
+// Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains the form used to edit the API filter items.
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
-// distributed with the code.  It can also be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.5.1.0  07/20/2007  EFW  Created the code
-// 1.6.0.4  01/17/2008  EFW  Made adjustments to support changes and fixes in the Sandcastle namespace ripping
-//                           feature.
-// 1.8.0.0  07/08/2008  EFW  Reworked to support MSBuild project format
-// 1.9.3.3  11/19/2011  EFW  Updated checked state optimization to handle some odd edge cases
+// 07/20/2007  EFW  Created the code
+// 01/17/2008  EFW  Made adjustments to support changes and fixes in the Sandcastle namespace ripping feature
+// 07/08/2008  EFW  Reworked to support MSBuild project format
+// 11/19/2011  EFW  Updated checked state optimization to handle some odd edge cases
 //===============================================================================================================
 
 using System;
@@ -486,21 +485,18 @@ namespace SandcastleBuilder.Utils.Design
                     reflectionFile = buildProcess.ReflectionInfoFilename;
 
                     // Restore the current project's base path
-                    Directory.SetCurrentDirectory(Path.GetDirectoryName(
-                        apiFilter.Project.Filename));
+                    Directory.SetCurrentDirectory(Path.GetDirectoryName(apiFilter.Project.Filename));
 
-                    // If successful, load the namespace nodes, and enable
-                    // the UI.
+                    // If successful, load the namespace nodes, and enable the UI
                     if(e.BuildStep == BuildStep.Completed)
                     {
-                        // Convert the build API filter to a dictionary to make
-                        // it easier to find entries.
+                        // Convert the build API filter to a dictionary to make it easier to find entries
                         buildFilterEntries = new Dictionary<string, ApiFilter>();
-                        this.ConvertApiFilter(buildProcess.BuildApiFilter);
 
+                        this.ConvertApiFilter(buildProcess.CurrentProject.ApiFilter);
                         this.LoadNamespaces();
-                        tvApiList.Enabled = splitContainer.Panel2.Enabled =
-                            btnReset.Enabled = true;
+
+                        tvApiList.Enabled = splitContainer.Panel2.Enabled = btnReset.Enabled = true;
                     }
 
                     pbWait.Visible = lblLoading.Visible = false;

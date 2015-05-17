@@ -40,7 +40,7 @@ namespace SandcastleBuilder.Utils
     /// This class represents a file that is part of the project (MAML/additional content, site map, style
     /// sheet, etc.).
     /// </summary>
-    public class FileItem : ICustomTypeDescriptor
+    public class FileItem : ProjectElement, ICustomTypeDescriptor
     {
         #region Private data members
         //=====================================================================
@@ -58,12 +58,6 @@ namespace SandcastleBuilder.Utils
         //=====================================================================
 
         /// <summary>
-        /// This returns the project element associated with the instance
-        /// </summary>
-        [Browsable(false)]
-        public ProjectElement ProjectElement { get; private set; }
-
-        /// <summary>
         /// This is used to set or get the build action of the item
         /// </summary>
         /// <value>If set to <c>Image</c>, <see cref="ImageId"/> and <see cref="AlternateText" /> will be set to
@@ -77,7 +71,7 @@ namespace SandcastleBuilder.Utils
             {
                 string baseName;
 
-                this.ProjectElement.ItemType = value.ToString();
+                this.ItemType = value.ToString();
                 buildAction = value;
 
                 // Set default ID and description if set to Image
@@ -101,7 +95,7 @@ namespace SandcastleBuilder.Utils
         /// This is used to set or get the filename (include path)
         /// </summary>
         [Browsable(false)]
-        public FilePath Include
+        public FilePath IncludePath
         {
             get { return includePath; }
             set
@@ -110,8 +104,7 @@ namespace SandcastleBuilder.Utils
                     throw new ArgumentException("A file path must be specified and cannot contain wildcards " +
                         "(* or ?)", "value");
 
-                // Do this first in case the project isn't editable
-                this.ProjectElement.Include = value.PersistablePath;
+                this.Include = value.PersistablePath;
 
                 includePath = value;
                 includePath.PersistablePathChanging += includePath_PersistablePathChanging;
@@ -121,9 +114,9 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This is used to set or get the link path
         /// </summary>
-        /// <value>If the item has no link path, this returns the <see cref="Include" /> path</value>
+        /// <value>If the item has no link path, this returns the <see cref="IncludePath" /> path</value>
         [Browsable(false)]
-        public FilePath Link
+        public FilePath LinkPath
         {
             get { return (linkPath == null) ? includePath : linkPath; }
             set
@@ -135,13 +128,13 @@ namespace SandcastleBuilder.Utils
                 if(value != null && value.Path.Length != 0)
                 {
                     // Do this first in case the project isn't editable
-                    this.ProjectElement.SetMetadata(BuildItemMetadata.LinkPath, value.PersistablePath);
+                    this.SetMetadata(BuildItemMetadata.LinkPath, value.PersistablePath);
                     linkPath = value;
                     linkPath.PersistablePathChanging += linkPath_PersistablePathChanging;
                 }
                 else
                 {
-                    this.ProjectElement.SetMetadata(BuildItemMetadata.LinkPath, null);
+                    this.SetMetadata(BuildItemMetadata.LinkPath, null);
                     linkPath = null;
                 }
             }
@@ -181,13 +174,13 @@ namespace SandcastleBuilder.Utils
                 if(buildAction != BuildAction.Folder)
                 {
                     // If it's a link, copy the file to the project folder and remove the link metadata
-                    if(this.ProjectElement.HasMetadata(BuildItemMetadata.LinkPath))
+                    if(this.HasMetadata(BuildItemMetadata.LinkPath))
                     {
                         newPath = linkPath;
                         File.Copy(path, newPath, true);
                         File.SetAttributes(newPath, FileAttributes.Normal);
                         path = newPath;
-                        this.ProjectElement.SetMetadata(BuildItemMetadata.LinkPath, null);
+                        this.SetMetadata(BuildItemMetadata.LinkPath, null);
                     }
 
                     newPath = Path.Combine(Path.GetDirectoryName(path), value);
@@ -200,7 +193,7 @@ namespace SandcastleBuilder.Utils
                             throw new ArgumentException("A file with that name already exists in the project folder");
 
                         File.Move(path, newPath);
-                        this.Include = new FilePath(newPath, this.ProjectElement.Project);
+                        this.IncludePath = new FilePath(newPath, this.Project);
                     }
 
                     return;
@@ -226,11 +219,11 @@ namespace SandcastleBuilder.Utils
                 }
 
                 Directory.Move(path, newPath);
-                path = this.ProjectElement.Include;
+                path = this.Include;
                 newPath = Path.Combine(Path.GetDirectoryName(path.Substring(0, path.Length - 1)), value) + "\\";
-                this.Include = new FilePath(newPath, this.ProjectElement.Project);
+                this.IncludePath = new FilePath(newPath, this.Project);
 
-                foreach(ProjectItem item in this.ProjectElement.Project.MSBuildProject.AllEvaluatedItems)
+                foreach(ProjectItem item in this.Project.MSBuildProject.AllEvaluatedItems)
                     if(item.EvaluatedInclude.StartsWith(path, StringComparison.OrdinalIgnoreCase))
                         item.UnevaluatedInclude = newPath + item.UnevaluatedInclude.Substring(path.Length);
             }
@@ -250,7 +243,7 @@ namespace SandcastleBuilder.Utils
                 if(value != null)
                     value = value.Trim();
 
-                this.ProjectElement.SetMetadata(BuildItemMetadata.ImageId, value);
+                this.SetMetadata(BuildItemMetadata.ImageId, value);
                 imageId = value;
             }
         }
@@ -267,7 +260,7 @@ namespace SandcastleBuilder.Utils
                 if(value != null)
                     value = value.Trim();
 
-                this.ProjectElement.SetMetadata(BuildItemMetadata.AlternateText, value);
+                this.SetMetadata(BuildItemMetadata.AlternateText, value);
                 altText = value;
             }
         }
@@ -284,7 +277,7 @@ namespace SandcastleBuilder.Utils
             get { return copyToMedia; }
             set
             {
-                this.ProjectElement.SetMetadata(BuildItemMetadata.CopyToMedia, value.ToString(CultureInfo.InvariantCulture));
+                this.SetMetadata(BuildItemMetadata.CopyToMedia, value.ToString(CultureInfo.InvariantCulture));
                 copyToMedia = value;
             }
         }
@@ -299,7 +292,7 @@ namespace SandcastleBuilder.Utils
             get { return sortOrder; }
             set
             {
-                this.ProjectElement.SetMetadata(BuildItemMetadata.SortOrder, value.ToString(CultureInfo.InvariantCulture));
+                this.SetMetadata(BuildItemMetadata.SortOrder, value.ToString(CultureInfo.InvariantCulture));
                 sortOrder = value;
             }
         }
@@ -309,64 +302,80 @@ namespace SandcastleBuilder.Utils
         //=====================================================================
 
         /// <summary>
-        /// This is used to handle changes in the <see cref="Include" /> properties such that the path gets
+        /// This is used to handle changes in the <see cref="IncludePath" /> properties such that the path gets
         /// stored in the project file.
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
         private void includePath_PersistablePathChanging(object sender, EventArgs e)
         {
-            this.ProjectElement.Include = includePath.PersistablePath;
+            this.Include = includePath.PersistablePath;
         }
 
         /// <summary>
-        /// This is used to handle changes in the <see cref="Link" /> properties such that the path gets stored
+        /// This is used to handle changes in the <see cref="LinkPath" /> properties such that the path gets stored
         /// in the project file.
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
         private void linkPath_PersistablePathChanging(object sender, EventArgs e)
         {
-            this.ProjectElement.SetMetadata(BuildItemMetadata.LinkPath, includePath.PersistablePath);
+            this.SetMetadata(BuildItemMetadata.LinkPath, includePath.PersistablePath);
         }
         #endregion
 
-        #region Constructor
+        #region Constructors
         //=====================================================================
 
         /// <summary>
-        /// Internal Constructor
+        /// This constructor is used to wrap an existing project item
         /// </summary>
-        /// <param name="element">The project element</param>
-        internal FileItem(ProjectElement element)
+        /// <param name="project">The project that owns the item</param>
+        /// <param name="existingItem">The existing project item</param>
+        /// <overloads>There are two overloads for the constructor</overloads>
+        internal FileItem(SandcastleProject project, ProjectItem existingItem) : base(project, existingItem)
         {
-            this.ProjectElement = element;
-
-            buildAction = (BuildAction)Enum.Parse(typeof(BuildAction), element.ItemType, true);
-            includePath = new FilePath(element.Include, element.Project);
+            buildAction = (BuildAction)Enum.Parse(typeof(BuildAction), this.ItemType, true);
+            includePath = new FilePath(this.Include, this.Project);
             includePath.PersistablePathChanging += includePath_PersistablePathChanging;
 
-            element.Include = includePath.PersistablePath;
+            this.Include = includePath.PersistablePath;
 
-            if(element.HasMetadata(BuildItemMetadata.LinkPath))
+            if(this.HasMetadata(BuildItemMetadata.LinkPath))
             {
-                linkPath = new FilePath(element.GetMetadata(BuildItemMetadata.LinkPath), element.Project);
+                linkPath = new FilePath(this.GetMetadata(BuildItemMetadata.LinkPath), this.Project);
                 linkPath.PersistablePathChanging += linkPath_PersistablePathChanging;
             }
 
-            if(element.HasMetadata(BuildItemMetadata.ImageId))
-                imageId = element.GetMetadata(BuildItemMetadata.ImageId);
+            if(this.HasMetadata(BuildItemMetadata.ImageId))
+                imageId = this.GetMetadata(BuildItemMetadata.ImageId);
 
-            if(element.HasMetadata(BuildItemMetadata.AlternateText))
-                altText = element.GetMetadata(BuildItemMetadata.AlternateText);
+            if(this.HasMetadata(BuildItemMetadata.AlternateText))
+                altText = this.GetMetadata(BuildItemMetadata.AlternateText);
 
-            if(element.HasMetadata(BuildItemMetadata.CopyToMedia))
-                if(!Boolean.TryParse(ProjectElement.GetMetadata(BuildItemMetadata.CopyToMedia), out copyToMedia))
+            if(this.HasMetadata(BuildItemMetadata.CopyToMedia))
+                if(!Boolean.TryParse(this.GetMetadata(BuildItemMetadata.CopyToMedia), out copyToMedia))
                     copyToMedia = false;
 
-            if(element.HasMetadata(BuildItemMetadata.SortOrder))
-                if(!Int32.TryParse(ProjectElement.GetMetadata(BuildItemMetadata.SortOrder), out sortOrder))
+            if(this.HasMetadata(BuildItemMetadata.SortOrder))
+                if(!Int32.TryParse(this.GetMetadata(BuildItemMetadata.SortOrder), out sortOrder))
                     sortOrder = 0;
+        }
+
+        /// <summary>
+        /// This constructor is used to create a new item and add it to the project
+        /// </summary>
+        /// <param name="project">The project that will own the item</param>
+        /// <param name="itemType">The type of item to create</param>
+        /// <param name="itemPath">The path to the item</param>
+        internal FileItem(SandcastleProject project, string itemType, string itemPath) :
+          base(project, itemType, itemPath)
+        {
+            buildAction = (BuildAction)Enum.Parse(typeof(BuildAction), this.ItemType, true);
+            includePath = new FilePath(this.Include, this.Project);
+            includePath.PersistablePathChanging += includePath_PersistablePathChanging;
+
+            this.Include = includePath.PersistablePath;
         }
         #endregion
 
@@ -378,11 +387,10 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         public void RefreshPaths()
         {
-            this.includePath = new FilePath(this.ProjectElement.Include, this.ProjectElement.Project);
+            includePath = new FilePath(this.Include, this.Project);
 
-            if(this.ProjectElement.HasMetadata(BuildItemMetadata.LinkPath))
-                this.Link = new FilePath(this.ProjectElement.GetMetadata(BuildItemMetadata.LinkPath),
-                    this.ProjectElement.Project);
+            if(this.HasMetadata(BuildItemMetadata.LinkPath))
+                this.LinkPath = new FilePath(this.GetMetadata(BuildItemMetadata.LinkPath), this.Project);
         }
         #endregion
 

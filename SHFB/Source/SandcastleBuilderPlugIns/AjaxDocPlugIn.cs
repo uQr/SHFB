@@ -336,10 +336,10 @@ namespace SandcastleBuilder.PlugIns
             builder.ApplyVisibilityProperties(builder.ReflectionInfoFilename);
 
             // Don't apply the API filter settings in a partial build
-            if(builder.PartialBuildType == PartialBuildType.None && builder.BuildApiFilter.Count != 0)
+            if(builder.PartialBuildType == PartialBuildType.None && builder.CurrentProject.ApiFilter.Count != 0)
             {
                 builder.ReportProgress("Applying API filter manually");
-                builder.ApplyManualApiFilter(builder.BuildApiFilter, builder.ReflectionInfoFilename);
+                builder.ApplyManualApiFilter(builder.CurrentProject.ApiFilter, builder.ReflectionInfoFilename);
             }
 
             // Allow After step plug-ins to run

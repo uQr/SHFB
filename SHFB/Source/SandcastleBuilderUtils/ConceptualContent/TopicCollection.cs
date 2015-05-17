@@ -303,7 +303,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         public void MatchProjectFilesToTopics()
         {
-            SandcastleProject project = fileItem.ProjectElement.Project;
+            SandcastleProject project = fileItem.Project;
             FileItem topicItem;
             TopicFile topicFile;
 
@@ -316,7 +316,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
                     if(ext == ".aml")
                     {
-                        topicItem = new FileItem(new ProjectElement(project, item));
+                        topicItem = new FileItem(project, item);
                         topicFile = new TopicFile(topicItem);
 
                         if(topicFile.Id != null)
@@ -631,8 +631,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
                     if(t.TopicFile != null)
                     {
-                        entry.SourceFile = new FilePath(t.TopicFile.FullPath,
-                            t.TopicFile.FileItem.ProjectElement.Project);
+                        entry.SourceFile = new FilePath(t.TopicFile.FullPath, pathProvider);
                         entry.DestinationFile = "html\\" + t.Id + ".htm";
                     }
 

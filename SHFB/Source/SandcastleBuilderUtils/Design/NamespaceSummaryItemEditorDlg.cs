@@ -2,32 +2,32 @@
 // System  : EWSoftware Design Time Attributes and Editors
 // File    : NamespaceSummaryItemEditorDlg.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/02/2014
-// Note    : Copyright 2006-2014, Eric Woodruff, All rights reserved
+// Updated : 05/16/2015
+// Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains the form used to edit namespace summaries and to indicate which namespaces should appear
 // in the help file.
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
-// distributed with the code.  It can also be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.2.0.0  09/04/2006  EFW  Created the code
-// 1.4.0.0  02/12/2007  EFW  Added the ability to delete old namespaces
-// 1.6.0.4  01/17/2008  EFW  Added more error info to help diagnose exceptions when an assembly fails to load
-// 1.6.0.6  03/07/2008  EFW  Added filter options and reworked the namespace extract to use a partial build
-//                           rather than the assembly loader to prevent "assembly not found" errors caused by
-//                           nested dependencies.
-// 1.8.0.0  06/30/2008  EFW  Reworked to support MSBuild project format
+// 09/04/2006  EFW  Created the code
+// 02/12/2007  EFW  Added the ability to delete old namespaces
+// 01/17/2008  EFW  Added more error info to help diagnose exceptions when an assembly fails to load
+// 03/07/2008  EFW  Added filter options and reworked the namespace extract to use a partial build rather than
+//                  the assembly loader to prevent "assembly not found" errors caused by nested dependencies.
+// 06/30/2008  EFW  Reworked to support MSBuild project format
 //===============================================================================================================
 
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -54,13 +54,6 @@ namespace SandcastleBuilder.Utils.Design
         private class NamespaceComparer : IComparer<String>
         {
             internal const string GroupSuffix = " (Group)";
-
-            /// <summary>
-            /// Constructor
-            /// </summary>
-            public NamespaceComparer()
-            {
-            }
 
             /// <inheritdoc />
             int IComparer<string>.Compare(string x, string y)
@@ -390,11 +383,11 @@ namespace SandcastleBuilder.Utils.Design
             }
 
             // Add new items that were modified
-            foreach(NamespaceSummaryItem item in lbNamespaces.Items)
-                if(item.IsDirty && nsColl[item.Name] == null)
+            foreach(var item in lbNamespaces.Items.OfType<NamespaceSummaryItem>().Where(ns => ns.IsDirty))
+                if(nsColl[item.Name] == null)
                     nsColl.Add(item);
 
-            this.DialogResult = nsColl.IsDirty ? DialogResult.OK : DialogResult.Cancel;
+            this.DialogResult = nsColl.Any(ns => ns.IsDirty) ? DialogResult.OK : DialogResult.Cancel;
 
             if(tempProject != null)
             {

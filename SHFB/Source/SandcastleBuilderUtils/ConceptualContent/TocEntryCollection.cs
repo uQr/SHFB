@@ -361,7 +361,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
             foreach(XmlNode site in siteMap.ChildNodes[1].ChildNodes)
             {
-                entry = new TocEntry(siteMapFile.ProjectElement.Project);
+                entry = new TocEntry(siteMapFile.Project);
                 entry.LoadSiteMapNode(site);
                 base.Add(entry);
             }

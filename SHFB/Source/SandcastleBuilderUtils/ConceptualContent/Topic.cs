@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : Topic.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/07/2015
+// Updated : 05/16/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -27,11 +27,11 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
 
 using Sandcastle.Core;
-
 using SandcastleBuilder.Utils.BuildEngine;
 
 namespace SandcastleBuilder.Utils.ConceptualContent
@@ -152,7 +152,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     return "(Not found)";
                 }
 
-                return topicFile.FileItem.Include.PersistablePath;
+                return topicFile.FileItem.IncludePath.PersistablePath;
             }
         }
 
@@ -179,7 +179,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                         value = null;
 
                     title = value;
-                    this.OnPropertyChanged("Title");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("DisplayTitle");
                 }
             }
@@ -201,7 +201,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                         value = null;
 
                     tocTitle = value;
-                    this.OnPropertyChanged("TocTitle");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("DisplayTitle");
                 }
             }
@@ -223,7 +223,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                         value = null;
 
                     linkText = value;
-                    this.OnPropertyChanged("LinkText");
+                    this.OnPropertyChanged();
                 }
             }
         }
@@ -241,7 +241,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != isVisible)
                 {
                     isVisible = value;
-                    this.OnPropertyChanged("Visible");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("ToolTip");  // Affects tool tip too
 
                     // The default topic must be visible.  The MSHV root must not be visible.  A hidden topic
@@ -325,7 +325,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != isDefaultTopic)
                 {
                     isDefaultTopic = value;
-                    this.OnPropertyChanged("IsDefaultTopic");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("ToolTip");  // Affects tool tip too
 
                     // The default topic must be visible and cannot be the MSHV root container
@@ -349,7 +349,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != apiParentMode)
                 {
                     apiParentMode = value;
-                    this.OnPropertyChanged("ApiParentMode");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("ToolTip");  // Affects tool tip too
 
                     // The API parent node must be visible and cannot be the MSHV root container
@@ -374,7 +374,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != isMSHVRoot)
                 {
                     isMSHVRoot = value;
-                    this.OnPropertyChanged("IsMSHVRootContentContainer");
+                    this.OnPropertyChanged();
                     this.OnPropertyChanged("ToolTip");  // Affects tool tip too
 
                     // The MSHV root container must not be visible and cannot be the default topic or API
@@ -403,7 +403,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != isSelected)
                 {
                     isSelected = value;
-                    this.OnPropertyChanged("IsSelected");
+                    this.OnPropertyChanged();
                 }
             }
         }
@@ -421,7 +421,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 if(value != isExpanded)
                 {
                     isExpanded = value;
-                    this.OnPropertyChanged("IsExpanded");
+                    this.OnPropertyChanged();
                 }
             }
         }
@@ -484,7 +484,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         {
             contentId = Guid.NewGuid().ToString();
             subtopics = new TopicCollection(null);
-            helpAttributes = new MSHelpAttrCollection(null);
+            helpAttributes = new MSHelpAttrCollection();
             keywords = new MSHelpKeywordCollection();
             this.Visible = true;
 
@@ -506,7 +506,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// This raises the <see cref="PropertyChanged"/> event
         /// </summary>
         /// <param name="propertyName">The property name that changed</param>
-        protected void OnPropertyChanged(string propertyName)
+        protected void OnPropertyChanged([CallerMemberName]string propertyName = null)
         {
             var handler = PropertyChanged;
 

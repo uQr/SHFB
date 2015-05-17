@@ -617,7 +617,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 return;
 
             fileItem = (FileItem)nodeData.Item;
-            fullName = fileItem.Include;
+            fullName = fileItem.IncludePath;
             ext = Path.GetExtension(fullName);
 
             // If the document is already open, just activate it
@@ -856,7 +856,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                                 break;
 
                             default:
-                                if(((FileItem)nodeData.Item).ProjectElement.HasMetadata(BuildItemMetadata.LinkPath))
+                                if(((FileItem)nodeData.Item).HasMetadata(BuildItemMetadata.LinkPath))
                                     miExcludeFromProject_Click(sender, e);
                                 else
                                     miDelete_Click(sender, e);
@@ -1254,8 +1254,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 nodeData.BuildAction < BuildAction.Folder);
             miOpenWithTextEditor.Visible = miOpenWithSeparator.Visible = (nodeData != null &&
                 nodeData.BuildAction < BuildAction.Folder && fileItem != null &&
-                ShowOpenWithTextEditor(fileItem.Include));
-            miDelete.Visible = (fileItem != null && !fileItem.ProjectElement.HasMetadata(BuildItemMetadata.LinkPath));
+                ShowOpenWithTextEditor(fileItem.IncludePath));
+            miDelete.Visible = (fileItem != null && !fileItem.HasMetadata(BuildItemMetadata.LinkPath));
             miExcludeFromProject.Enabled = miCut.Enabled = miCopy.Enabled = miRename.Enabled =
                 (nodeData != null && nodeData.BuildAction <= BuildAction.Folder);
             miPaste.Enabled = (Clipboard.GetDataObject().GetDataPresent(DataFormats.FileDrop) &&
@@ -1289,7 +1289,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 return;
 
             fileItem = (FileItem)nodeData.Item;
-            fullName = fileItem.Include;
+            fullName = fileItem.IncludePath;
 
             // If the document is already open, just activate it
             foreach(IDockContent content in this.DockPanel.Contents)
@@ -1440,9 +1440,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 }
                 else
                     if(nodeData.BuildAction == BuildAction.Folder)
-                        path = ((FileItem)nodeData.Item).Include;
+                        path = ((FileItem)nodeData.Item).IncludePath;
                     else
-                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
             }
 
             do
@@ -1458,9 +1458,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
             fileTree.LoadTree(toAdd);
 
             if(parent == null)
-                matches = tvProjectFiles.Nodes[0].Nodes.Find(folderItem.Include.PersistablePath, false);
+                matches = tvProjectFiles.Nodes[0].Nodes.Find(folderItem.IncludePath.PersistablePath, false);
             else
-                matches = parent.Nodes.Find(folderItem.Include.PersistablePath, false);
+                matches = parent.Nodes.Find(folderItem.IncludePath.PersistablePath, false);
 
             if(matches.Length > 0)
             {
@@ -1506,9 +1506,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 }
                 else
                     if(nodeData.BuildAction == BuildAction.Folder)
-                        path = ((FileItem)nodeData.Item).Include;
+                        path = ((FileItem)nodeData.Item).IncludePath;
                     else
-                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
             }
 
             using(FolderBrowserDialog dlg = new FolderBrowserDialog())
@@ -1549,9 +1549,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
             if(parent == null)
                 matches = tvProjectFiles.Nodes[0].Nodes.Find(
-                    folderItem.Include.PersistablePath, false);
+                    folderItem.IncludePath.PersistablePath, false);
             else
-                matches = parent.Nodes.Find(folderItem.Include.PersistablePath,
+                matches = parent.Nodes.Find(folderItem.IncludePath.PersistablePath,
                     false);
 
             if(matches.Length > 0)
@@ -1599,9 +1599,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     path = Path.GetDirectoryName(currentProject.Filename);
                 else
                     if(nodeData.BuildAction == BuildAction.Folder)
-                        path = ((FileItem)nodeData.Item).Include;
+                        path = ((FileItem)nodeData.Item).IncludePath;
                     else
-                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
             }
 
             try
@@ -1689,17 +1689,17 @@ namespace SandcastleBuilder.Gui.ContentEditors
                             destPath = Path.GetDirectoryName(currentProject.Filename);
                         else
                             if(nodeData.BuildAction == BuildAction.Folder)
-                                destPath = ((FileItem)nodeData.Item).Include;
+                                destPath = ((FileItem)nodeData.Item).IncludePath;
                             else
                                 destPath = Path.GetDirectoryName(
-                                    ((FileItem)nodeData.Item).Include);
+                                    ((FileItem)nodeData.Item).IncludePath);
                     }
 
                     try
                     {
                         Cursor.Current = Cursors.WaitCursor;
 
-                        var images = currentProject.ImagesReferences();
+                        var images = currentProject.ImagesReferences;
                         media = new XPathDocument(dlg.FileName);
                         navMedia = media.CreateNavigator();
 
@@ -1789,9 +1789,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     path = Path.GetDirectoryName(currentProject.Filename);
                 else
                     if(nodeData.BuildAction == BuildAction.Folder)
-                        path = ((FileItem)nodeData.Item).Include;
+                        path = ((FileItem)nodeData.Item).IncludePath;
                     else
-                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
             }
 
             using(SaveFileDialog dlg = new SaveFileDialog())
@@ -1992,9 +1992,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 path = Path.GetDirectoryName(currentProject.Filename);
             else
                 if(nodeData.BuildAction == BuildAction.Folder)
-                    path = ((FileItem)nodeData.Item).Include;
+                    path = ((FileItem)nodeData.Item).IncludePath;
                 else
-                    path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                    path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
 
             nodeData = (NodeData)dropNode.Tag;
             fileItem = (FileItem)nodeData.Item;
@@ -2023,26 +2023,22 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                 if(fileItem.BuildAction != BuildAction.Folder)
                 {
-                    // If it's a link, copy the file to the project folder
-                    // and remove the link metadata.
-                    if(fileItem.ProjectElement.HasMetadata(BuildItemMetadata.LinkPath))
+                    // If it's a link, copy the file to the project folder and remove the link metadata
+                    if(fileItem.HasMetadata(BuildItemMetadata.LinkPath))
                     {
-                        path = fileItem.Link;
-                        File.Copy(fileItem.Include, path, true);
+                        path = fileItem.LinkPath;
+                        File.Copy(fileItem.IncludePath, path, true);
                         File.SetAttributes(path, FileAttributes.Normal);
-                        fileItem.ProjectElement.SetMetadata(BuildItemMetadata.LinkPath,
-                            null);
+                        fileItem.SetMetadata(BuildItemMetadata.LinkPath, null);
                     }
 
                     if(path != newPath)
                     {
                         if(File.Exists(newPath))
-                            throw new ArgumentException("A file with that " +
-                                "name already exists in the destination folder");
+                            throw new ArgumentException("A file with that name already exists in the destination folder");
 
                         File.Move(path, newPath);
-                        fileItem.Include = new FilePath(newPath,
-                            fileItem.ProjectElement.Project);
+                        fileItem.IncludePath = new FilePath(newPath, fileItem.Project);
                     }
                 }
                 else
@@ -2053,11 +2049,11 @@ namespace SandcastleBuilder.Gui.ContentEditors
                             "name already exists in the destination folder");
 
                     Directory.Move(path, newPath);
-                    path = fileItem.ProjectElement.Include;
+                    path = fileItem.IncludePath;
                     newPath += "\\";
-                    fileItem.Include = new FilePath(newPath, fileItem.ProjectElement.Project);
+                    fileItem.IncludePath = new FilePath(newPath, fileItem.Project);
 
-                    foreach(ProjectItem item in fileItem.ProjectElement.Project.MSBuildProject.AllEvaluatedItems)
+                    foreach(ProjectItem item in fileItem.Project.MSBuildProject.AllEvaluatedItems)
                         if(item.EvaluatedInclude.StartsWith(path, StringComparison.OrdinalIgnoreCase))
                             item.UnevaluatedInclude = newPath + item.EvaluatedInclude.Substring(path.Length);
                 }
@@ -2065,7 +2061,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 this.LoadProject();
 
                 matches = tvProjectFiles.Nodes.Find(
-                    fileItem.Include.PersistablePath, true);
+                    fileItem.IncludePath.PersistablePath, true);
 
                 if(matches.Length != 0)
                     tvProjectFiles.SelectedNode = matches[0];
@@ -2113,11 +2109,11 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 nodeData = (NodeData)targetNode.Tag;
 
                 if(nodeData.BuildAction == BuildAction.Folder)
-                    path = ((FileItem)nodeData.Item).Include;
+                    path = ((FileItem)nodeData.Item).IncludePath;
                 else
                     if(nodeData.BuildAction != BuildAction.DocumentationSource &&
                       nodeData.BuildAction != BuildAction.ReferenceItem)
-                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).Include);
+                        path = Path.GetDirectoryName(((FileItem)nodeData.Item).IncludePath);
             }
 
             try
@@ -2380,16 +2376,16 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                         if(fileItem != null)
                         {
-                            fileItem.ProjectElement.RemoveFromProjectFile();
+                            fileItem.RemoveFromProjectFile();
 
                             if(fileItem.BuildAction == BuildAction.Folder)
                             {
-                                if(Directory.Exists(fileItem.Include))
-                                    Directory.Delete(fileItem.Include, true);
+                                if(Directory.Exists(fileItem.IncludePath))
+                                    Directory.Delete(fileItem.IncludePath, true);
                             }
                             else
-                                if(File.Exists(fileItem.Include))
-                                    File.Delete(fileItem.Include);
+                                if(File.Exists(fileItem.IncludePath))
+                                    File.Delete(fileItem.IncludePath);
                         }
                     }
             }
@@ -2412,7 +2408,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 if(fileItem != null)
                 {
                     matches = tvProjectFiles.Nodes[0].Nodes.Find(
-                        fileItem.Include.PersistablePath, true);
+                        fileItem.IncludePath.PersistablePath, true);
 
                     if(matches.Length == 1)
                         tvProjectFiles.SelectedNode = matches[0];

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.Transform.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/03/2015
+// Updated : 05/15/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -591,8 +591,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 case "apifilter":
                     // In a partial build used to get API info for the API filter designer, we won't apply the
                     // filter.
-                    if(!this.SuppressApiFilter)
-                        replaceWith = apiFilter.ToString();
+                    if(!this.SuppressApiFilter && project.ApiFilter.Count != 0)
+                        replaceWith = project.ApiFilter.ToString();
                     else
                         replaceWith = String.Empty;
                     break;

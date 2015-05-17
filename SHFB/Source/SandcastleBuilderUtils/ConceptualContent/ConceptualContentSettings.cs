@@ -100,7 +100,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <param name="project">The project from which to load the settings</param>
         public ConceptualContentSettings(SandcastleProject project)
         {
-            imageFiles = project.ImagesReferences().ToList();
+            imageFiles = project.ImagesReferences.ToList();
             codeSnippetFiles = project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath).ToList();
             tokenFiles = project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath).ToList();
             contentLayoutFiles = project.ContentFiles(BuildAction.ContentLayout).ToList();
@@ -306,7 +306,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// the project being built as it may alter the underlying MSBuild project which is not wanted.</remarks>
         public void MergeContentFrom(SandcastleProject project)
         {
-            imageFiles.AddRange(project.ImagesReferences());
+            imageFiles.AddRange(project.ImagesReferences);
             codeSnippetFiles.AddRange(project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath));
             tokenFiles.AddRange(project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath));
             contentLayoutFiles.AddRange(project.ContentFiles(BuildAction.ContentLayout));

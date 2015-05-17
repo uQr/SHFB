@@ -247,7 +247,6 @@ namespace SandcastleBuilder.WPF.UserControls
             var args = new FileContentNeededEventArgs(FileContentNeededEvent, this);
             base.RaiseEvent(args);
 
-            currentProject.EnsureProjectIsCurrent(false);
             lblCurrentProject.Text = currentProject.Filename;
             browserHistory.Clear();
             historyLocation = -1;
@@ -259,7 +258,7 @@ namespace SandcastleBuilder.WPF.UserControls
 
                 // Get the image files.  This information is used to resolve media link elements in the
                 // topic files.
-                foreach(var file in currentProject.ImagesReferences())
+                foreach(var file in currentProject.ImagesReferences)
                     converter.MediaFiles[file.Id] = new KeyValuePair<string, string>(file.FullPath, file.AlternateText);
             }
             catch(Exception ex)

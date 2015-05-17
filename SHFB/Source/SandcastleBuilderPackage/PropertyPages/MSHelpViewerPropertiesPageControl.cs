@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Visual Studio Package
 // File    : MSHelpViewerPropertiesPageControl.cs
 // Author  : Eric Woodruff
-// Updated : 03/24/2015
+// Updated : 05/15/2015
 // Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -166,16 +166,14 @@ namespace SandcastleBuilder.Package.PropertyPages
             if(control.Name == "dgvHelpAttributes")
             {
                 attributesChanged = false;
+                attributes = new MSHelpAttrCollection();
 
 #if !STANDALONEGUI
-                attributes = new MSHelpAttrCollection(
-                    ((SandcastleBuilderProjectNode)base.ProjectMgr).SandcastleProject);
                 projProp = this.ProjectMgr.BuildProject.GetProperty("HelpAttributes");
 #else
-                attributes = new MSHelpAttrCollection(this.CurrentProject);
                 projProp = this.CurrentProject.MSBuildProject.GetProperty("HelpAttributes");
 #endif
-                if(projProp != null && !String.IsNullOrEmpty(projProp.UnevaluatedValue))
+                if(projProp != null && !String.IsNullOrWhiteSpace(projProp.UnevaluatedValue))
                     attributes.FromXml(projProp.UnevaluatedValue);
 
                 dgvHelpAttributes.DataSource = attributes;

@@ -201,9 +201,7 @@
     <Compile Include="BuildComponent\PlugInConfiguration.cs" />
     <Compile Include="BuildComponent\PlugInConfigurationDictionary.cs" />
     <Compile Include="ProjectElement.cs" />
-    <Compile Include="ProjectPropertyChangedEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfoShared.cs" />
-    <Compile Include="PropertyBasedCollectionItem.cs" />
     <Compile Include="Utility.cs" />
     <Compile Include="XPath\MatchesRegexFunction.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

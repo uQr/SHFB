@@ -43,7 +43,7 @@ namespace SandcastleBuilder.Utils
         public FileItemCollection(SandcastleProject project, BuildAction buildAction)
         {
             foreach(ProjectItem item in project.MSBuildProject.GetItems(buildAction.ToString()))
-                this.Add(new FileItem(new ProjectElement(project, item)));
+                this.Add(new FileItem(project, item));
 
             switch(buildAction)
             {
@@ -57,14 +57,14 @@ namespace SandcastleBuilder.Utils
                         if(x.SortOrder > y.SortOrder)
                             return 1;
                         
-                        return String.Compare(x.Link.Path, y.Link.Path, StringComparison.OrdinalIgnoreCase);
+                        return String.Compare(x.LinkPath.Path, y.LinkPath.Path, StringComparison.OrdinalIgnoreCase);
                     });
                     break;
 
                 default:
                     ((List<FileItem>)base.Items).Sort((x, y) =>
                     {
-                        return String.Compare(x.Link.Path, y.Link.Path, StringComparison.OrdinalIgnoreCase);
+                        return String.Compare(x.LinkPath.Path, y.LinkPath.Path, StringComparison.OrdinalIgnoreCase);
                     });
                     break;
             }

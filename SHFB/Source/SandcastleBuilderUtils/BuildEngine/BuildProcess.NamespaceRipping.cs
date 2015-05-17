@@ -2,23 +2,23 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.NamespaceRipping.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 08/24/2014
-// Note    : Copyright 2007-2014, Eric Woodruff, All rights reserved
+// Updated : 05/15/2015
+// Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains the code used to generate the API filter collection information used by MRefBuilder to
 // exclude API entries while generating the reflection information file.
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
-// distributed with the code.  It can also be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.5.0.2  07/16/2007  EFW  Created the code
-// 1.5.2.0  09/13/2007  EFW  Added support for calling plug-ins
-// 1.6.0.6  03/10/2008  EFW  Added support for applying the API filter manually
+// 07/16/2007  EFW  Created the code
+// 09/13/2007  EFW  Added support for calling plug-ins
+// 03/10/2008  EFW  Added support for applying the API filter manually
 //===============================================================================================================
 
 using System;
@@ -32,30 +32,10 @@ namespace SandcastleBuilder.Utils.BuildEngine
 {
     partial class BuildProcess
     {
-        #region Private data members
-        //=====================================================================
-
-        // The API filter collection
-        private ApiFilterCollection apiFilter;
-
-        #endregion
-
-        #region Properties
-        //=====================================================================
-
-        /// <summary>
-        /// This read-only property returns the API filter that is used at build-time to filter the API elements
-        /// </summary>
-        /// <remarks>This is a combination of the project's API filter, namespace exclusions, and
-        /// <c>&lt;exclude /&gt;</c> tag exclusions.</remarks>
-        public ApiFilterCollection BuildApiFilter
-        {
-            get { return apiFilter; }
-        }
-        #endregion
-
         #region Automatic API filter methods
         //=====================================================================
+
+        // TODO: Once the manual API filter methods are removed, move this method to HelpFileUtils
 
         /// <summary>
         /// This is used to generate the API filter collection used by MRefBuilder to exclude items from the
@@ -136,8 +116,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 return (int)xType - (int)yType;
             });
 
-            // Clone the project ApiFilter and merge the members from the rip list
-            apiFilter = (ApiFilterCollection)project.ApiFilter.Clone();
+            // Get the project's API filter and merge the members from the rip list
+            var apiFilter = project.ApiFilter;
 
             // For the API filter to work, we have to nest the entries by namespace, type, and member.  As such,
             // we have to break apart what we've got in the list and merge it with the stuff the user may have
@@ -147,7 +127,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 // Namespaces are easy
                 if(member[0] == 'N')
                 {
-                    if(!apiFilter.MergeEntry(ApiEntryType.Namespace, member.Substring(2), false, true))
+                    if(!apiFilter.MergeExclusionEntry(ApiEntryType.Namespace, member.Substring(2)))
                         this.ReportWarning("BE0008", "Namespace '{0}' excluded via namespace comments " +
                             "conflicted with API filter setting.  Exclusion ignored.", member);
 
@@ -255,6 +235,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
         #region Manual API filter methods
         //=====================================================================
+
+        // TODO: Remove this section and put it in a plug-in
 
         /// <summary>
         /// This is used to manually apply the specified API filter to the specified reflection information file

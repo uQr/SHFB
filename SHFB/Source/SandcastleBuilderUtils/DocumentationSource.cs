@@ -2,28 +2,27 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : DocumentationSource.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 08/24/2014
-// Note    : Copyright 2006-2014, Eric Woodruff, All rights reserved
+// Updated : 05/16/2015
+// Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class representing a documentation source such as an assembly, an XML comments file, a
 // solution, or a project.
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
-// distributed with the code.  It can also be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.0.0.0  08/02/2006  EFW  Created the code
-// 1.3.2.0  11/10/2006  EFW  Added CommentsOnly property.
-// 1.3.4.0  12/31/2006  EFW  Converted path properties to FilePath objects
-// 1.6.0.7  04/16/2008  EFW  Added support for wildcards
-// 1.8.0.0  06/23/2008  EFW  Rewrote to support the MSBuild project format
-// 1.8.0.4  06/05/2010  EFW  Added support for getting build include status and configuration settings from the
-//                           solution file.
-// 1.9.6.0  10/22/2012  EFW  Added support for .winmd documentation sources
+// 08/02/2006  EFW  Created the code
+// 11/10/2006  EFW  Added CommentsOnly property.
+// 12/31/2006  EFW  Converted path properties to FilePath objects
+// 04/16/2008  EFW  Added support for wildcards
+// 06/23/2008  EFW  Rewrote to support the MSBuild project format
+// 06/05/2010  EFW  Added support for getting build include status and configuration settings from solution file
+// 10/22/2012  EFW  Added support for .winmd documentation sources
 //===============================================================================================================
 
 using System;
@@ -46,7 +45,7 @@ namespace SandcastleBuilder.Utils
     /// </summary>
     /// <remarks>Wildcards are supported in the <see cref="SourceFile"/> property.</remarks>
     [DefaultProperty("SourceFile")]
-    public class DocumentationSource : PropertyBasedCollectionItem
+    public class DocumentationSource
     {
         #region Private data members
         //=====================================================================
@@ -65,10 +64,23 @@ namespace SandcastleBuilder.Utils
             "E6FDF86B-F3D1-11D4-8576-0002A516ECE8" +    // J#
             ")\\}\"\\) = \".*?\", \"(?!http)" +
             "(?<Path>.*?proj)\", \"\\{(?<GUID>.*?)\\}\"", RegexOptions.Multiline);
+
         #endregion
 
         #region Properties
         //=====================================================================
+
+        /// <summary>
+        /// This is used to get the owning project file
+        /// </summary>
+        [Browsable(false)]
+        public SandcastleProject ProjectFile { get; private set; }
+
+        /// <summary>
+        /// This is used to get or set the dirty state of the item
+        /// </summary>
+        [Browsable(false)]
+        public bool IsDirty { get; set; }
 
         /// <summary>
         /// This is used to get or set the project configuration to use when the source path refers to a Visual
@@ -84,12 +96,8 @@ namespace SandcastleBuilder.Utils
             get { return configuration; }
             set
             {
-                base.CheckProjectIsEditable();
-
-                if(value != null)
-                    value = value.Trim();
-
-                configuration = value;
+                configuration = (value ?? String.Empty).Trim();
+                documentationSource_PropertyChanging(this, EventArgs.Empty);
             }
         }
 
@@ -107,12 +115,8 @@ namespace SandcastleBuilder.Utils
             get { return platform; }
             set
             {
-                base.CheckProjectIsEditable();
-
-                if(value != null)
-                    value = value.Trim();
-
-                platform = value;
+                platform = (value ?? String.Empty).Trim();
+                documentationSource_PropertyChanging(this, EventArgs.Empty);
             }
         }
 
@@ -138,14 +142,10 @@ namespace SandcastleBuilder.Utils
             set
             {
                 if(value == null || value.Path.Length == 0)
-                    throw new ArgumentException("A file path must be specified",
-                        "value");
-
-                base.CheckProjectIsEditable();
+                    throw new ArgumentException("A file path must be specified", "value");
 
                 sourceFile = value;
-                sourceFile.PersistablePathChanging += new EventHandler(
-                    sourceFile_PersistablePathChanging);
+                sourceFile.PersistablePathChanging += documentationSource_PropertyChanging;
             }
         }
 
@@ -163,13 +163,13 @@ namespace SandcastleBuilder.Utils
             get { return includeSubFolders; }
             set
             {
-                base.CheckProjectIsEditable();
                 includeSubFolders = value;
+                documentationSource_PropertyChanging(this, EventArgs.Empty);
             }
         }
 
         /// <summary>
-        /// This returns a description of the entry suitable for display in a bound list control
+        /// This returns a description of the entry suitable for display in a bound list control or property grid
         /// </summary>
         [Browsable(false)]
         public string SourceDescription
@@ -188,13 +188,14 @@ namespace SandcastleBuilder.Utils
 
                 if((ext.IndexOfAny(wildcards) != -1 || ext == ".sln" ||
                   ext.EndsWith("proj", StringComparison.Ordinal)) &&
-                  (!String.IsNullOrEmpty(configuration) ||
-                  !String.IsNullOrEmpty(platform)))
+                  (!String.IsNullOrEmpty(configuration) || !String.IsNullOrEmpty(platform)))
+                {
                     config = String.Format(CultureInfo.InvariantCulture, " ({0}|{1})",
                         (String.IsNullOrEmpty(configuration)) ? "$(Configuration)" : configuration,
                         (String.IsNullOrEmpty(platform)) ? "$(Platform)" : platform);
+                }
 
-                if(path.IndexOfAny(wildcards) != -1 && includeSubFolders)
+                if(path.IndexOfAny(wildcards) != -1 && this.IncludeSubFolders)
                     subFolders = " including subfolders";
 
                 return String.Concat(path, config, subFolders);
@@ -202,18 +203,43 @@ namespace SandcastleBuilder.Utils
         }
         #endregion
 
+        #region Constructor
+        //=====================================================================
+
+        /// <summary>
+        /// Internal constructor
+        /// </summary>
+        /// <param name="filename">The filename of the documentation source</param>
+        /// <param name="configuration">The configuration to use for projects</param>
+        /// <param name="platform">The platform to use for projects</param>
+        /// <param name="includeSubfolders">True to include subfolders, false to only search the top-level folder</param>
+        /// <param name="project">The owning project</param>
+        internal DocumentationSource(string filename, string configuration, string platform, bool includeSubfolders,
+          SandcastleProject project)
+        {
+            this.ProjectFile = project;
+            this.includeSubFolders = includeSubfolders;
+            this.configuration = configuration;
+            this.platform = platform;
+            this.SourceFile = new FilePath(filename, project);
+        }
+        #endregion
+
         #region Private helper methods
         //=====================================================================
 
         /// <summary>
-        /// This is used to handle changes in the <see cref="FilePath" /> properties such that the source path
-        /// gets stored in the project file.
+        /// This is used to handle changes in the <see cref="FilePath" /> and other properties such that the
+        /// source path gets stored in the project file.
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void sourceFile_PersistablePathChanging(object sender, EventArgs e)
+        private void documentationSource_PropertyChanging(object sender, EventArgs e)
         {
-            base.CheckProjectIsEditable();
+            if(this.ProjectFile != null)
+                this.ProjectFile.MarkAsDirty();
+
+            this.IsDirty = true;
         }
 
         /// <summary>
@@ -265,28 +291,6 @@ namespace SandcastleBuilder.Utils
                         Platform = buildMatch.Groups["Platform"].Value.Trim()
                     });
             }
-        }
-        #endregion
-
-        #region Constructor
-        //=====================================================================
-
-        /// <summary>
-        /// Internal constructor
-        /// </summary>
-        /// <param name="filename">The filename of the documentation source</param>
-        /// <param name="projConfig">The configuration to use for projects</param>
-        /// <param name="projPlatform">The platform to use for projects</param>
-        /// <param name="subFolders">True to include subfolders, false to only search the top-level folder.</param>
-        /// <param name="project">The owning project</param>
-        internal DocumentationSource(string filename, string projConfig, string projPlatform, bool subFolders,
-          SandcastleProject project) : base(project)
-        {
-            sourceFile = new FilePath(filename, project);
-            sourceFile.PersistablePathChanging += sourceFile_PersistablePathChanging;
-            configuration = projConfig;
-            platform = projPlatform;
-            includeSubFolders = subFolders;
         }
         #endregion
 
@@ -366,8 +370,7 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This returns a collection of XML comments files based on the specified wildcard.
         /// </summary>
-        /// <param name="wildcard">The wildcard to use to find comments
-        /// files.</param>
+        /// <param name="wildcard">The wildcard to use to find comments files.</param>
         /// <param name="includeSubfolders">If true and the wildcard parameter includes wildcard characters,
         /// subfolders will be searched as well.  If not, only the top-level folder is searched.</param>
         /// <returns>A list of XML comments files matching the wildcard</returns>
@@ -396,12 +399,11 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This returns a collection of MSBuild project filenames based on the specified wildcard.
         /// </summary>
-        /// <param name="wildcard">The wildcard to use to find solutions and
-        /// projects.</param>
+        /// <param name="wildcard">The wildcard to use to find solutions and projects.</param>
         /// <param name="includeSubfolders">If true and the wildcard parameter includes wildcard characters,
         /// subfolders will be searched as well.  If not, only the top-level folder is searched.</param>
-        /// <param name="configuration">The configuration to use</param>
-        /// <param name="platform">The platform to use</param>
+        /// <param name="configuration">The configuration to use.</param>
+        /// <param name="platform">The platform to use.</param>
         /// <returns>A list of projects matching the wildcard.  Any solution files (.sln) found are returned
         /// last, each followed by the projects extracted from it.</returns>
         public static Collection<ProjectFileConfiguration> Projects(string wildcard,

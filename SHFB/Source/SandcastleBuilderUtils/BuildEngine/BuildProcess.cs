@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/10/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -131,9 +131,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
         // Build output file lists
         private Collection<string> help1Files, helpViewerFiles, websiteFiles, openXmlFiles, markdownFiles;
 
-        // Progress event arguments
-        private BuildProgressEventArgs progressArgs;
+        // Build progress tracking
         private DateTime buildStart, stepStart;
+        private bool buildCancelling;
 
         // Various paths and other strings
         private string templateFolder, projectFolder, outputFolder, workingFolder, hhcFolder, languageFolder,
@@ -174,9 +174,20 @@ namespace SandcastleBuilder.Utils.BuildEngine
         //=====================================================================
 
         /// <summary>
-        /// This is used to get the cancellation state of the build
+        /// This is used to get or set the progress report provider
         /// </summary>
-        public bool BuildCanceled { get; set; }
+        /// <remarks>If not set, no progress will be reported by the build</remarks>
+        public IProgress<BuildProgressEventArgs> ProgressReportProvider { get; set; }
+
+        /// <summary>
+        /// This is used to get or set the cancellation token for the build if running as a task
+        /// </summary>
+        public CancellationToken CancellationToken { get; set; }
+
+        /// <summary>
+        /// This read-only property is used to get the current build step
+        /// </summary>
+        public BuildStep CurrentBuildStep { get; private set; }
 
         /// <summary>
         /// This returns the path to MSBuild.exe
@@ -519,45 +530,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         }
         #endregion
 
-        #region Events
-        //=====================================================================
-
-        /// <summary>
-        /// This event is raised to report a change in the build step
-        /// </summary>
-        public event EventHandler<BuildProgressEventArgs> BuildStepChanged;
-
-        /// <summary>
-        /// This raises the <see cref="BuildStepChanged"/> event.
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        protected virtual void OnBuildStepChanged(BuildProgressEventArgs e)
-        {
-            var handler = BuildStepChanged;
-
-            if(handler != null)
-                handler(this, e);
-        }
-
-        /// <summary>
-        /// This event is raised to report progress information throughout
-        /// each build step.
-        /// </summary>
-        public event EventHandler<BuildProgressEventArgs> BuildProgress;
-
-        /// <summary>
-        /// This raises the <see cref="BuildProgress"/> event.
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        protected virtual void OnBuildProgress(BuildProgressEventArgs e)
-        {
-            var handler = BuildProgress;
-
-            if(handler != null)
-                handler(this, e);
-        }
-        #endregion
-
         #region Constructors
         //=====================================================================
 
@@ -576,8 +548,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
             apiTocOrder = -1;
             apiTocParentId = rootContentContainerId = String.Empty;
-
-            progressArgs = new BuildProgressEventArgs();
 
             fieldMatchEval = new MatchEvaluator(OnFieldMatch);
             excludeElementEval = new MatchEvaluator(OnExcludeElement);
@@ -607,8 +577,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// <summary>
         /// Call this method to perform the build on the project.
         /// </summary>
-        /// <event cref="BuildStepChanged">This event fires when the current build step changes.</event>
-        /// <event cref="BuildProgress">This event fires to report progress information.</event>
         public void Build()
         {
             Project msBuildProject = null;
@@ -1074,8 +1042,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 commentsFiles.Save();
 
-                this.GarbageCollect();
-
                 this.EnsureOutputFoldersExist(null);
 
                 // Copy conceptual content files if there are topics or tokens.  Tokens can be replaced in
@@ -1247,8 +1213,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:n BuildConceptualTopics.proj");
                         this.ExecutePlugIns(ExecutionBehaviors.After);
                     }
-
-                    this.GarbageCollect();
                 }
 
                 // Build the reference help topics
@@ -1602,8 +1566,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     }
                 }
 AllDone:
-                progressArgs.HasCompleted = true;
-
                 TimeSpan runtime = DateTime.Now - buildStart;
 
                 this.ReportProgress(BuildStep.Completed, "\r\nBuild completed successfully at {0}.  " +
@@ -1612,8 +1574,10 @@ AllDone:
 
                 System.Diagnostics.Debug.WriteLine("Build process finished successfully\r\n");
             }
-            catch(ThreadAbortException )
+            catch(OperationCanceledException )
             {
+                buildCancelling = true;
+
                 // Kill off the process, known child processes, and the STDOUT and STDERR threads too if
                 // necessary.
                 if(currentProcess != null && !currentProcess.HasExited)
@@ -1669,7 +1633,6 @@ AllDone:
                         waitCount++;
                 }
 
-                progressArgs.HasCompleted = true;
                 this.ReportError(BuildStep.Canceled, "BE0064", "BUILD CANCELLED BY USER");
                 System.Diagnostics.Debug.WriteLine("Build process aborted\r\n");
             }
@@ -1677,7 +1640,6 @@ AllDone:
             {
                 BuilderException bex = ex as BuilderException;
                 System.Diagnostics.Debug.WriteLine(ex);
-                progressArgs.HasCompleted = true;
 
                 do
                 {
@@ -1742,7 +1704,7 @@ AllDone:
                         project = originalProject;
                     }
 
-                    if(progressArgs.BuildStep == BuildStep.Completed && !project.KeepLogFile)
+                    if(this.CurrentBuildStep == BuildStep.Completed && !project.KeepLogFile)
                         File.Delete(this.LogFilename);
                 }
             }
@@ -1760,7 +1722,7 @@ AllDone:
         /// <overloads>This method has two overloads.</overloads>
         public void ReportProgress(string message, params object[] args)
         {
-            this.ReportProgress(progressArgs.BuildStep, message, args);
+            this.ReportProgress(this.CurrentBuildStep, message, args);
         }
 
         /// <summary>
@@ -1788,7 +1750,7 @@ AllDone:
         {
             string warningMessage = String.Format(CultureInfo.CurrentCulture, message, args);
 
-            this.ReportProgress(progressArgs.BuildStep, "SHFB: Warning {0}: {1}", warningCode, warningMessage);
+            this.ReportProgress(this.CurrentBuildStep, "SHFB: Warning {0}: {1}", warningCode, warningMessage);
         }
 
         /// <summary>
@@ -1797,55 +1759,55 @@ AllDone:
         /// <param name="step">The current build step</param>
         /// <param name="message">The message to report</param>
         /// <param name="args">A list of arguments to format into the message text</param>
-        /// <event cref="BuildStepChanged">This event fires when the current build step changes</event>
-        /// <event cref="BuildProgress">This event fires to report progress information</event>
         protected void ReportProgress(BuildStep step, string message, params object[] args)
         {
+            BuildProgressEventArgs pa;
             TimeSpan runtime;
 
-            bool stepChanged = (progressArgs.BuildStep != step);
+            if(this.CancellationToken != null && !buildCancelling)
+                this.CancellationToken.ThrowIfCancellationRequested();
+
+            bool stepChanged = (this.CurrentBuildStep != step);
 
             if(stepChanged)
             {
-                // Don't bother for the initialization steps
+                // Don't bother reporting elapsed time for the initialization steps
                 if(step > BuildStep.GenerateSharedContent)
                 {
                     runtime = DateTime.Now - stepStart;
-                    progressArgs.Message = String.Format(CultureInfo.CurrentCulture, "    Last step " +
-                        "completed in {0:00}:{1:00}:{2:00.0000}", Math.Floor(runtime.TotalSeconds / 3600),
-                        Math.Floor((runtime.TotalSeconds % 3600) / 60), (runtime.TotalSeconds % 60));
+
+                    pa = new BuildProgressEventArgs(this.CurrentBuildStep, false,
+                        String.Format(CultureInfo.CurrentCulture, "    Last step completed in " +
+                        "{0:00}:{1:00}:{2:00.0000}", Math.Floor(runtime.TotalSeconds / 3600),
+                        Math.Floor((runtime.TotalSeconds % 3600) / 60), (runtime.TotalSeconds % 60)));
 
                     if(swLog != null)
-                        swLog.WriteLine(progressArgs.Message);
+                        swLog.WriteLine(pa.Message);
 
-                    this.OnBuildProgress(progressArgs);
+                    if(this.ProgressReportProvider != null)
+                        this.ProgressReportProvider.Report(pa);
                 }
 
-                progressArgs.Message = "-------------------------------";
-                this.OnBuildProgress(progressArgs);
+                if(this.ProgressReportProvider != null)
+                    this.ProgressReportProvider.Report(new BuildProgressEventArgs(this.CurrentBuildStep, false,
+                        "-------------------------------"));
 
                 stepStart = DateTime.Now;
-                progressArgs.BuildStep = step;
+                this.CurrentBuildStep = step;
 
                 if(swLog != null)
                     swLog.WriteLine("</buildStep>\r\n<buildStep step=\"{0}\">", step);
             }
 
-            progressArgs.Message = String.Format(CultureInfo.CurrentCulture, message, args);
+            pa = new BuildProgressEventArgs(this.CurrentBuildStep, stepChanged,
+                String.Format(CultureInfo.CurrentCulture, message, args));
 
             // Save the message to the log file
             if(swLog != null)
-                swLog.WriteLine(HttpUtility.HtmlEncode(progressArgs.Message));
+                swLog.WriteLine(HttpUtility.HtmlEncode(pa.Message));
 
-            // Report progress first and then the step change so that any final information gets saved to the log
-            // file.
-            this.OnBuildProgress(progressArgs);
-
-            if(stepChanged)
-                OnBuildStepChanged(progressArgs);
-
-            if(this.BuildCanceled && !progressArgs.HasCompleted)
-                throw new BuilderException("BUILD CANCELLED");
+            if(this.ProgressReportProvider != null)
+                this.ProgressReportProvider.Report(pa);
         }
         #endregion
 
@@ -1853,23 +1815,20 @@ AllDone:
         //=====================================================================
 
         /// <summary>
-        /// Force garbage collection to reduce memory usage.
+        /// Force garbage collection to reduce memory usage
         /// </summary>
-        /// <remarks>The reflection information file and XML comments files
-        /// can be quite large.  To reduce memory usage, we force a garbage
-        /// collection to get rid of all the discarded objects.</remarks>
+        /// <remarks>The reflection information file and XML comments files can be quite large.  To reduce memory
+        /// usage, we force a garbage collection to get rid of all the discarded objects.</remarks>
         private void GarbageCollect()
         {
 #if DEBUG
-            this.ReportProgress("\r\n  GC: Memory used before: {0:0,0}",
-                GC.GetTotalMemory(false));
+            this.ReportProgress("\r\n  GC: Memory used before: {0:0,0}", GC.GetTotalMemory(false));
 #endif
-            GC.Collect(2);
+            GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
-            GC.Collect(2);
+            GC.Collect(GC.MaxGeneration);
 #if DEBUG
-            this.ReportProgress("  GC: Memory used after: {0:0,0}\r\n",
-                GC.GetTotalMemory(false));
+            this.ReportProgress("  GC: Memory used after: {0:0,0}\r\n", GC.GetTotalMemory(false));
 #endif
         }
 
@@ -2583,7 +2542,7 @@ AllDone:
 
                 } while(line != null);
             }
-            catch(ThreadAbortException)
+            catch(OperationCanceledException)
             {
                 System.Diagnostics.Debug.WriteLine("ReadStdOut thread aborted\r\n");
             }
@@ -2624,7 +2583,7 @@ AllDone:
 
                 } while(line != null);
             }
-            catch(ThreadAbortException)
+            catch(OperationCanceledException)
             {
                 System.Diagnostics.Debug.WriteLine("ReadStdErr thread aborted\r\n");
             }

@@ -176,6 +176,8 @@ namespace SandcastleBuilder.Utils
                     xr.Read();
                 }
             }
+
+            isDirty = false;
         }
 
         /// <summary>

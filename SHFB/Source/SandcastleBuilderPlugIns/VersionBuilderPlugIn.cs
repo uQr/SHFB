@@ -196,22 +196,9 @@ namespace SandcastleBuilder.PlugIns
             foreach(VersionSettings vs in allVersions)
             {
                 // Not needed for current project
-                if(vs.HelpFileProject == null)
-                    continue;
-
-                using(SandcastleProject tempProject = new SandcastleProject(vs.HelpFileProject, true))
+                if(vs.HelpFileProject != null)
                 {
-                    // Set the configuration and platform here so that they are evaluated property in project
-                    // properties when the project is loaded below.
-                    tempProject.Configuration = builder.CurrentProject.Configuration;
-                    tempProject.Platform = builder.CurrentProject.Platform;
-
-                    // This looks odd but is necessary.  If we are in Visual Studio, the above constructor may
-                    // return an instance that uses an underlying MSBuild project loaded in Visual Studio.
-                    // Since the BuildProject() method modifies the project, those changes are propagated to the
-                    // Visual Studio copy which we do not want to happen.  As such, we use this constructor to
-                    // clone the MSBuild project XML thus avoiding modifications to the original project.
-                    using(SandcastleProject project = new SandcastleProject(tempProject))
+                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true))
                     {
                         // We'll use a working folder below the current project's working folder
                         workingPath = builder.WorkingFolder + vs.HelpFileProject.GetHashCode().ToString("X",
@@ -226,10 +213,10 @@ namespace SandcastleBuilder.PlugIns
                             throw new BuilderException("VBP0003", "Unable to build prior version project: " +
                                 project.Filename);
                     }
-                }
 
-                // Save the reflection file location as we need it later
-                vs.ReflectionFilename = workingPath + "reflection.org";
+                    // Save the reflection file location as we need it later
+                    vs.ReflectionFilename = workingPath + "reflection.org";
+                }
             }
 
             // Create the Version Builder configuration and add the parameters to the transform project
@@ -356,6 +343,9 @@ namespace SandcastleBuilder.PlugIns
 
             try
             {
+                project.Configuration = builder.CurrentProject.Configuration;
+                project.Platform = builder.CurrentProject.Platform;
+
                 // For the plug-in, we'll override some project settings
                 project.HtmlHelp1xCompilerPath = new FolderPath(builder.Help1CompilerFolder, true, project);
                 project.WorkingPath = new FolderPath(workingPath, true, project);
@@ -367,9 +357,10 @@ namespace SandcastleBuilder.PlugIns
                 if(!String.IsNullOrEmpty(outDir) && outDir != @".\")
                     project.MSBuildOutDir = outDir;
 
-                buildProcess = new BuildProcess(project, PartialBuildType.GenerateReflectionInfo);
-
-                buildProcess.BuildStepChanged += buildProcess_BuildStepChanged;
+                buildProcess = new BuildProcess(project, PartialBuildType.GenerateReflectionInfo)
+                {
+                    ProgressReportProvider = new Progress<BuildProgressEventArgs>(buildProcess_ReportProgress)
+                };
 
                 // Since this is a plug-in, we'll run it directly rather than in a background thread
                 buildProcess.Build();
@@ -389,14 +380,16 @@ namespace SandcastleBuilder.PlugIns
         }
 
         /// <summary>
-        /// This is called by the build process thread to update the application with the current build step
+        /// This is used to report build progress
         /// </summary>
-        /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildStepChanged(object sender, BuildProgressEventArgs e)
+        private void buildProcess_ReportProgress(BuildProgressEventArgs e)
         {
-            builder.ReportProgress(e.BuildStep.ToString());
-            lastBuildStep = e.BuildStep;
+            if(e.StepChanged)
+            {
+                builder.ReportProgress(e.BuildStep.ToString());
+                lastBuildStep = e.BuildStep;
+            }
         }
 
         /// <summary>

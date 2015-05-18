@@ -2,7 +2,7 @@
 // System  : EWSoftware Design Time Attributes and Editors
 // File    : ApiFilterEditorDlg.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/15/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
@@ -444,108 +445,48 @@ namespace SandcastleBuilder.Utils.Design
         private string reflectionFile;
         private Dictionary<string, ApiFilter> buildFilterEntries;
 
-        private Thread buildThread;
         private BuildProcess buildProcess;
+        private CancellationTokenSource cancellationTokenSource;
+
+        #endregion
+
+        #region Constructor
+        //=====================================================================
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="filter">The item collection to edit</param>
+        public ApiFilterEditorDlg(ApiFilterCollection filter)
+        {
+            InitializeComponent();
+
+            // An italic font is used for nodes that cannot have their check state changed.  A tool tip will give
+            // further details.
+            tvApiList.Nodes[0].NodeFont = tvApiList.Nodes[1].NodeFont = italicFont =
+                new Font(this.Font, FontStyle.Italic);
+
+            apiFilter = filter;
+        }
         #endregion
 
         #region Build methods
         //=====================================================================
 
         /// <summary>
-        /// This is called by the build process thread to update the main
-        /// window with the current build step.
+        /// This is used to report build progress
         /// </summary>
-        /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildStepChanged(object sender,
-          BuildProgressEventArgs e)
+        private void buildProcess_ReportProgress(BuildProgressEventArgs e)
         {
-            if(this.InvokeRequired)
-            {
-                try
-                {
-                    // Ignore it if we've already shut down or it hasn't
-                    // completed yet.
-                    if(!this.IsDisposed)
-                        this.Invoke(new EventHandler<BuildProgressEventArgs>(buildProcess_BuildStepChanged),
-                            new object[] { sender, e });
-                }
-                catch(Exception)
-                {
-                    // Ignore these as we still get one occasionally due to the object being disposed
-                    // or the handle not being valid even though we do check for it first.
-                }
-            }
-            else
-            {
+            if(e.StepChanged)
                 lblProgress.Text = e.BuildStep.ToString();
-
-                if(e.HasCompleted)
-                {
-                    reflectionFile = buildProcess.ReflectionInfoFilename;
-
-                    // Restore the current project's base path
-                    Directory.SetCurrentDirectory(Path.GetDirectoryName(apiFilter.Project.Filename));
-
-                    // If successful, load the namespace nodes, and enable the UI
-                    if(e.BuildStep == BuildStep.Completed)
-                    {
-                        // Convert the build API filter to a dictionary to make it easier to find entries
-                        buildFilterEntries = new Dictionary<string, ApiFilter>();
-
-                        this.ConvertApiFilter(buildProcess.CurrentProject.ApiFilter);
-                        this.LoadNamespaces();
-
-                        tvApiList.Enabled = splitContainer.Panel2.Enabled = btnReset.Enabled = true;
-                    }
-
-                    pbWait.Visible = lblLoading.Visible = false;
-
-                    buildThread = null;
-                    buildProcess = null;
-                }
-            }
-        }
-
-        /// <summary>
-        /// This is called by the build process thread to update the main
-        /// window with information about its progress.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildProgress(object sender,
-          BuildProgressEventArgs e)
-        {
-            if(this.InvokeRequired)
-            {
-                try
-                {
-                    // Ignore it if we've already shut down
-                    if(!this.IsDisposed)
-                        this.Invoke(new EventHandler<BuildProgressEventArgs>(buildProcess_BuildProgress),
-                            new object[] { sender, e });
-                }
-                catch(Exception)
-                {
-                    // Ignore these as we still get one occasionally due to the object being
-                    // disposed even though we do check for it first.
-                }
-            }
-            else
-            {
-                if(e.BuildStep == BuildStep.Failed)
-                {
-                    MessageBox.Show("Unable to build project to obtain " +
-                        "API information.  Please perform a normal build " +
-                        "to identify and correct the problem.",
-                        Constants.AppName, MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                }
-            }
         }
         #endregion
 
         #region Tree view loading methods
+        //=====================================================================
+
         /// <summary>
         /// This is used to convert the API filter from the build into a
         /// dictionary so that it is easier to look up the entries.
@@ -1453,36 +1394,16 @@ namespace SandcastleBuilder.Utils.Design
         }
         #endregion
 
-        #region Constructor
-        //=====================================================================
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="filter">The item collection to edit</param>
-        public ApiFilterEditorDlg(ApiFilterCollection filter)
-        {
-            InitializeComponent();
-
-            // An italic font is used for nodes that cannot have their check state changed.  A tool tip will give
-            // further details.
-            tvApiList.Nodes[0].NodeFont = tvApiList.Nodes[1].NodeFont = italicFont =
-                new Font(this.Font, FontStyle.Italic);
-
-            apiFilter = filter;
-        }
-        #endregion
-
         #region General event handlers
         //=====================================================================
 
         /// <summary>
-        /// This is used to start the background build process from which
-        /// we will get the information to load the tree view.
+        /// This is used to start the background build process from which we will get the information to load the
+        /// tree view.
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void ApiFilterEditorDlg_Load(object sender, EventArgs e)
+        private async void ApiFilterEditorDlg_Load(object sender, EventArgs e)
         {
             string tempPath;
 
@@ -1491,11 +1412,9 @@ namespace SandcastleBuilder.Utils.Design
             try
             {
                 // Clone the project for the build and adjust its properties for our needs
-                tempProject = new SandcastleProject(apiFilter.Project);
+                tempProject = new SandcastleProject(apiFilter.Project.MSBuildProject);
 
-                // The temporary project resides in the same folder as the current project (by filename
-                // only, it isn't saved) to maintain relative paths.  However, build output is stored
-                // in a temporary folder and it keeps the intermediate files.
+                // Build output is stored in a temporary folder and it keeps the intermediate files
                 tempProject.CleanIntermediates = false;
                 tempPath = Path.GetTempFileName();
 
@@ -1507,24 +1426,58 @@ namespace SandcastleBuilder.Utils.Design
 
                 tempProject.OutputPath = tempPath;
 
-                buildProcess = new BuildProcess(tempProject, PartialBuildType.GenerateReflectionInfo);
+                cancellationTokenSource = new CancellationTokenSource();
 
-                // We must suppress the current API filter for this build
-                buildProcess.SuppressApiFilter = true;
+                buildProcess = new BuildProcess(tempProject, PartialBuildType.GenerateReflectionInfo)
+                {
+                    ProgressReportProvider = new Progress<BuildProgressEventArgs>(buildProcess_ReportProgress),
+                    CancellationToken = cancellationTokenSource.Token,
+                    SuppressApiFilter = true        // We must suppress the current API filter for this build
+                };
 
-                buildProcess.BuildStepChanged += buildProcess_BuildStepChanged;
-                buildProcess.BuildProgress += buildProcess_BuildProgress;
+                await Task.Run(() => buildProcess.Build(), cancellationTokenSource.Token);
 
-                buildThread = new Thread(new ThreadStart(buildProcess.Build));
-                buildThread.Name = "API filter partial build thread";
-                buildThread.IsBackground = true;
-                buildThread.Start();
+                if(!cancellationTokenSource.IsCancellationRequested)
+                {
+                    // Restore the current project's base path
+                    Directory.SetCurrentDirectory(Path.GetDirectoryName(apiFilter.Project.Filename));
+
+                    // If successful, load the namespace nodes, and enable the UI
+                    if(buildProcess.CurrentBuildStep == BuildStep.Completed)
+                    {
+                        reflectionFile = buildProcess.ReflectionInfoFilename;
+
+                        // Convert the build API filter to a dictionary to make it easier to find entries
+                        buildFilterEntries = new Dictionary<string, ApiFilter>();
+
+                        this.ConvertApiFilter(buildProcess.CurrentProject.ApiFilter);
+                        this.LoadNamespaces();
+
+                        tvApiList.Enabled = splitContainer.Panel2.Enabled = btnReset.Enabled = true;
+                    }
+                    else
+                        MessageBox.Show("Unable to build project to obtain API information.  Please perform a " +
+                            "normal build to identify and correct the problem.", Constants.AppName,
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    pbWait.Visible = lblLoading.Visible = false;
+                }
+
+                buildProcess = null;
             }
             catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
                 MessageBox.Show("Unable to build project to obtain API information.  Error: " +
                     ex.Message, Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if(cancellationTokenSource != null)
+                {
+                    cancellationTokenSource.Dispose();
+                    cancellationTokenSource = null;
+                }
             }
         }
 
@@ -1535,59 +1488,53 @@ namespace SandcastleBuilder.Utils.Design
         /// <param name="e">The event arguments</param>
         private void ApiFilterEditorDlg_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if(buildThread != null && buildThread.IsAlive)
+            if(cancellationTokenSource != null)
             {
-                if(MessageBox.Show("A build is currently taking place to " +
-                  "obtain API information.  Do you want to abort it and " +
-                  "close this form?", Constants.AppName,
-                  MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
-                  DialogResult.No)
+                if(MessageBox.Show("A build is currently taking place to obtain API information.  Do you want " +
+                  "to abort it and close this form?", Constants.AppName, MessageBoxButtons.YesNo,
+                  MessageBoxIcon.Question) == DialogResult.No)
                 {
                     e.Cancel = true;
                     return;
                 }
 
+                this.Cursor = Cursors.WaitCursor;
+
+                if(cancellationTokenSource != null)
+                    cancellationTokenSource.Cancel();
+
                 try
                 {
-                    this.Cursor = Cursors.WaitCursor;
+                    Cursor.Current = Cursors.WaitCursor;
 
-                    if(buildThread != null)
-                        buildThread.Abort();
-
-                    while(buildThread != null && !buildThread.Join(1000))
-                        Application.DoEvents();
-
-                    // Give it a short wait.  Sometimes we're still faster shutting down
-                    // than the thread is.
-                    Thread.Sleep(500);
-                    System.Diagnostics.Debug.WriteLine("Thread stopped");
+                    while(buildProcess != null && buildProcess.CurrentBuildStep < BuildStep.Completed)
+                        Thread.Sleep(100);
                 }
                 finally
                 {
-                    this.Cursor = Cursors.Default;
-                    buildThread = null;
-                    buildProcess = null;
+                    Cursor.Current = Cursors.Default;
                 }
+
+                this.DialogResult = DialogResult.Cancel;
             }
+            else
+                if(wasModified)
+                {
+                    apiFilter.Clear();
 
-            if(wasModified)
-            {
-                apiFilter.Clear();
+                    // Add documented namespace filters
+                    this.AddNamespaceFilter(tvApiList.Nodes[0]);
 
-                // Add documented namespace filters
-                this.AddNamespaceFilter(tvApiList.Nodes[0]);
-
-                // Add filters for inherited types
-                this.AddNamespaceFilter(tvApiList.Nodes[1]);
-            }
+                    // Add filters for inherited types
+                    this.AddNamespaceFilter(tvApiList.Nodes[1]);
+                }
 
             if(tempProject != null)
             {
                 try
                 {
                     // Delete the temporary project's working files
-                    if(!String.IsNullOrEmpty(tempProject.OutputPath) &&
-                      Directory.Exists(tempProject.OutputPath))
+                    if(!String.IsNullOrEmpty(tempProject.OutputPath) && Directory.Exists(tempProject.OutputPath))
                         Directory.Delete(tempProject.OutputPath, true);
                 }
                 catch
@@ -1598,10 +1545,6 @@ namespace SandcastleBuilder.Utils.Design
                 tempProject.Dispose();
                 tempProject = null;
             }
-
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
-            GC.Collect(2);
         }
 
         /// <summary>

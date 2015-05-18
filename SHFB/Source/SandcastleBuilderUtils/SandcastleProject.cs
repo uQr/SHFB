@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SandcastleProject.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/16/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -98,8 +98,7 @@ namespace SandcastleBuilder.Utils
     /// <summary>
     /// This class represents all of the properties that make up a Sandcastle Help File Builder project
     /// </summary>
-    [DefaultProperty("HtmlHelpName")]
-    public class SandcastleProject : IBasePathProvider, IDisposable
+    public sealed class SandcastleProject : IBasePathProvider, IDisposable
     {
         #region Constants
         //=====================================================================
@@ -504,7 +503,6 @@ namespace SandcastleBuilder.Utils
         /// build components.
         /// </summary>
         /// <value>If left blank, the current project's folder is searched instead</value>
-        [DefaultValue(null)]
         public FolderPath ComponentPath
         {
             get { return componentPath; }
@@ -521,7 +519,6 @@ namespace SandcastleBuilder.Utils
         /// This property is used to get or set the path to the HTML Help 1 compiler (HHC.EXE)
         /// </summary>
         /// <value>You only need to set this if the builder cannot determine the path for itself</value>
-        [DefaultValue(null)]
         public FolderPath HtmlHelp1xCompilerPath
         {
             get { return hhcPath; }
@@ -542,7 +539,6 @@ namespace SandcastleBuilder.Utils
         /// 
         /// <para><strong>Warning:</strong> If building a web site, the output folder's prior content will be
         /// erased without warning prior to copying the new web site content to it!</para></remarks>
-        [DefaultValue(@".\Help\")]
         public string OutputPath
         {
             get { return outputPath; }
@@ -567,7 +563,6 @@ namespace SandcastleBuilder.Utils
         /// 
         /// <para><strong>Warning:</strong> All files and folders in the path specified in this property will be
         /// erased without warning when the build starts.</para></value>
-        [DefaultValue(null)]
         public FolderPath WorkingPath
         {
             get { return workingPath; }
@@ -590,21 +585,18 @@ namespace SandcastleBuilder.Utils
         /// <value>The default is <c>AllMessages</c> to report all messages</value>
         /// <remarks>Setting this property to <c>OnlyWarningsAndErrors</c> or <c>OnlyErrors</c> can
         /// significantly reduce the size of the build log for large projects.</remarks>
-        [DefaultValue(BuildAssemblerVerbosity.OnlyWarningsAndErrors)]
         public BuildAssemblerVerbosity BuildAssemblerVerbosity { get; private set; }
 
         /// <summary>
         /// This property is used to get or set whether intermediate files are deleted after a successful build
         /// </summary>
         /// <value>The default value is true</value>
-        [DefaultValue(true)]
         public bool CleanIntermediates { get; set; }
 
         /// <summary>
         /// This property is used to get or set whether or not the log file is retained after a successful build
         /// </summary>
         /// <value>The default value is true</value>
-        [DefaultValue(true)]
         public bool KeepLogFile { get; set; }
 
         /// <summary>
@@ -612,7 +604,6 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <value>If not specified, a default name of <strong>LastBuild.log</strong> is used and the file is
         /// saved in the path identified in the <see cref="OutputPath" /> property.</value>
-        [DefaultValue(null)]
         public FilePath BuildLogFile
         {
             get { return buildLogFile; }
@@ -631,7 +622,6 @@ namespace SandcastleBuilder.Utils
         /// <value>The default is to produce an HTML Help 1 format file</value>
         /// <remarks>If building a web site, the output folder will be cleared before the new content is copied
         /// to it.</remarks>
-        [DefaultValue(HelpFileFormats.HtmlHelp1)]
         public HelpFileFormats HelpFileFormat { get; private set; }
 
         /// <summary>
@@ -640,7 +630,6 @@ namespace SandcastleBuilder.Utils
         /// transformations.
         /// </summary>
         /// <value>The default is false so that the Code Block Component is used by default</value>
-        [DefaultValue(false)]
         public bool DisableCodeBlockComponent { get; private set; }
 
         /// <summary>
@@ -671,7 +660,6 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <value>This is mainly a debugging aid.  Leave it set to false, the default, to produce more compact
         /// HTML.</value>
-        [DefaultValue(false)]
         public bool IndentHtml { get; private set; }
 
         /// <summary>
@@ -728,14 +716,12 @@ namespace SandcastleBuilder.Utils
         /// in the table of contents.
         /// </summary>
         /// <value>The default is to place additional and conceptual content items above the namespaces</value>
-        [DefaultValue(ContentPlacement.AboveNamespaces)]
         public ContentPlacement ContentPlacement { get; private set; }
 
         /// <summary>
         /// This read-only property is used to get whether or not all pages should be marked with a "preliminary
         /// documentation" warning in the page header.
         /// </summary>
-        [DefaultValue(false)]
         public bool Preliminary { get; private set; }
 
         /// <summary>
@@ -745,7 +731,6 @@ namespace SandcastleBuilder.Utils
         /// <value>If true, a root <strong>Namespaces</strong> table of contents entry will be created as the
         /// container of the namespaces in the documented assemblies.  If false, the default, the namespaces are
         /// listed in the table of contents as root entries.</value>
-        [DefaultValue(false)]
         public bool RootNamespaceContainer { get; private set; }
 
         /// <summary>
@@ -753,7 +738,7 @@ namespace SandcastleBuilder.Utils
         /// table of contents container that appears when <see cref="RootNamespaceContainer"/> is set to true.
         /// </summary>
         /// <value>If left blank (the default), the localized version of the text "Namespaces" will be used</value>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string RootNamespaceTitle
         {
             get { return rootNamespaceTitle; }
@@ -766,7 +751,6 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <value>If <c>true</c>, namespace grouping is enabled. Otherwise, namespace grouping is not enabled</value>
         /// <remarks>Namespace groups are determined automatically and may be documented as well</remarks>
-        [DefaultValue(false)]
         public bool NamespaceGrouping { get; private set; }
 
         /// <summary>
@@ -775,7 +759,6 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <value>The minimum and default is 2.  A higher value results in more namespace groups</value>
         /// <remarks>Namespace groups are determined automatically and may be documented as well</remarks>
-        [DefaultValue(2)]
         public int MaximumGroupParts
         {
             get { return maximumGroupParts; }
@@ -791,7 +774,7 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This read-only property is used to get or set the help file's title
         /// </summary>
-        [DefaultValue("A Sandcastle Documented Class Library"), EscapeValue]
+        [EscapeValue]
         public string HelpTitle
         {
             get { return helpTitle; }
@@ -811,7 +794,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>Do not include a path or the extension.  For MS Help Viewer builds, avoid periods,
         /// ampersands, and pound signs as they are not valid in the help file name.</remarks>
-        [DefaultValue("Documentation"), EscapeValue]
+        [EscapeValue]
         public string HtmlHelpName
         {
             get { return htmlHelpName; }
@@ -830,7 +813,7 @@ namespace SandcastleBuilder.Utils
         /// This read-only property is used to get the version number applied to the help file
         /// </summary>
         /// <remarks>The default is 1.0.0.0</remarks>
-        [DefaultValue("1.0.0.0"), EscapeValue]
+        [EscapeValue]
         public string HelpFileVersion
         {
             get { return helpFileVersion; }
@@ -854,7 +837,6 @@ namespace SandcastleBuilder.Utils
         /// <remarks>The MS Help Viewer 1.0 Catalog ID is composed of the <see cref="CatalogProductId"/>, the
         /// <see cref="CatalogVersion"/>, and the <c>Language</c> code. For example, the English Visual Studio 10
         /// catalog is <c>VS_100_EN-US</c>.</remarks>
-        [DefaultValue(typeof(CultureInfo), "en-US")]
         public CultureInfo Language
         {
             get { return language; }
@@ -871,7 +853,7 @@ namespace SandcastleBuilder.Utils
         /// This read-only property is used to get the URL to use as the link for the copyright notice
         /// </summary>
         /// <value>If not set, the <see cref="CopyrightText"/> (if any) is not turned into a clickable link</value>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string CopyrightHref
         {
             get { return copyrightHref; }
@@ -883,7 +865,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>If not set, no copyright note will appear.  If a <see cref="CopyrightHref" /> is specified
         /// without copyright text, the URL appears instead.</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string CopyrightText
         {
             get { return copyrightText; }
@@ -906,7 +888,7 @@ namespace SandcastleBuilder.Utils
         /// <remarks>If not set, no feedback link will appear.  If <see cref="FeedbackEMailLinkText"/> is set,
         /// that text will appear as the text for the link.  If not set, the e-mail address is used as the link
         /// text.</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string FeedbackEMailAddress
         {
             get { return feedbackEMailAddress; }
@@ -919,7 +901,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>If set, this text will appear as the link text for the <see cref="FeedbackEMailAddress"/>
         /// link.  If not set, the e-mail address is used for the link text.</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string FeedbackEMailLinkText
         {
             get { return feedbackEMailLinkText; }
@@ -929,7 +911,7 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This read-only property is used to get additional text that should appear in the header of every page
         /// </summary>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string HeaderText
         {
             get { return headerText; }
@@ -939,7 +921,7 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// This read-only property is used to get additional text that should appear in the footer of every page
         /// </summary>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string FooterText
         {
             get { return footerText; }
@@ -952,7 +934,6 @@ namespace SandcastleBuilder.Utils
         /// <value>The default is <c>Blank</c> to open the MSDN topics in a new window.  This option only has an
         /// effect on the <see cref="HtmlSdkLinkType"/>, <see cref="MSHelpViewerSdkLinkType"/>, and
         /// <see cref="WebsiteSdkLinkType"/> properties if they are set to <c>MSDN</c>.</value>
-        [DefaultValue(SdkLinkTarget.Blank)]
         public SdkLinkTarget SdkLinkTarget { get; private set; }
 
         /// <summary>
@@ -978,7 +959,6 @@ namespace SandcastleBuilder.Utils
         /// This read-only property is used to get the naming method used to generate the help topic filenames
         /// </summary>
         /// <value>The default is to use GUID values as the filenames</value>
-        [DefaultValue(NamingMethod.Guid)]
         public NamingMethod NamingMethod { get; private set; }
 
         /// <summary>
@@ -986,7 +966,6 @@ namespace SandcastleBuilder.Utils
         /// in the <strong>Syntax</strong> section of the help topics.
         /// </summary>
         /// <value>The default is <strong>Standard</strong> (C#, VB.NET, and C++)</value>
-        [DefaultValue("Standard")]
         public string SyntaxFilters
         {
             get { return syntaxFilters; }
@@ -1008,7 +987,6 @@ namespace SandcastleBuilder.Utils
         /// files.
         /// </summary>
         /// <remarks>This can significantly reduce the amount of time required to load a very large help file</remarks>
-        [DefaultValue(true)]
         public bool BinaryTOC { get; private set; }
 
         /// <summary>
@@ -1016,13 +994,11 @@ namespace SandcastleBuilder.Utils
         /// referring to framework (SDK) help topics in HTML Help 1 help files.
         /// </summary>
         /// <value>The default is to produce links to online MSDN content</value>
-        [DefaultValue(HtmlSdkLinkType.Msdn)]
         public HtmlSdkLinkType HtmlSdkLinkType { get; private set; }
 
         /// <summary>
         /// This read-only property is used to get whether or not a Favorites tab will appear in the help file
         /// </summary>
-        [DefaultValue(false)]
         public bool IncludeFavorites { get; private set; }
 
         #endregion
@@ -1035,7 +1011,6 @@ namespace SandcastleBuilder.Utils
         /// referring to framework (SDK) help topics in MS Help Viewer help files.
         /// </summary>
         /// <value>The default is to produce links to online MSDN content</value>
-        [DefaultValue(MSHelpViewerSdkLinkType.Msdn)]
         public MSHelpViewerSdkLinkType MSHelpViewerSdkLinkType { get; private set; }
 
         /// <summary>
@@ -1049,7 +1024,7 @@ namespace SandcastleBuilder.Utils
         /// 
         /// <note type="note">You should typically use the default value</note>
         /// </remarks>
-        [DefaultValue("VS"), EscapeValue]
+        [EscapeValue]
         public string CatalogProductId
         {
             get { return catalogProductId; }
@@ -1075,7 +1050,7 @@ namespace SandcastleBuilder.Utils
         /// 
         /// <note type="note">You should typically used the default value</note>
         /// </remarks>
-        [DefaultValue("100"), EscapeValue]
+        [EscapeValue]
         public string CatalogVersion
         {
             get { return catalogVersion; }
@@ -1095,7 +1070,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>If not specified, the default will be set based on the Visual Studio version catalog related
         /// to the Help Viewer (VisualStudio12 for Visual Studio 2013 for example).</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string CatalogName
         {
             get { return catalogName; }
@@ -1115,7 +1090,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>The default if not specified will be "Vendor Name".  The value must not contain the ':',
         /// '\', '/', '.', ',', '#', or '&amp;' characters.</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string VendorName
         {
             get { return vendorName; }
@@ -1138,7 +1113,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>The default if not specified will be the value of the <see cref="HelpTitle" />
         /// property.</remarks>
-        [DefaultValue(""), EscapeValue]
+        [EscapeValue]
         public string ProductTitle
         {
             get { return productTitle; }
@@ -1149,7 +1124,7 @@ namespace SandcastleBuilder.Utils
         /// This read-only property is used to get the topic version for each topic in the help file
         /// </summary>
         /// <remarks>The default is "100" (meaning 10.0)</remarks>
-        [DefaultValue("100"), EscapeValue]
+        [EscapeValue]
         public string TopicVersion
         {
             get { return topicVersion; }
@@ -1169,7 +1144,7 @@ namespace SandcastleBuilder.Utils
         /// file.
         /// </summary>
         /// <remarks>The default is "-1" to show the root topics in the root of the main table of content</remarks>
-        [DefaultValue("-1"), EscapeValue]
+        [EscapeValue]
         public string TocParentId
         {
             get { return tocParentId; }
@@ -1188,7 +1163,7 @@ namespace SandcastleBuilder.Utils
         /// This read-only property is used to get the topic version of the <see cref="TocParentId" /> topic
         /// </summary>
         /// <remarks>The default is "100" meaning "10.0"</remarks>
-        [DefaultValue("100"), EscapeValue]
+        [EscapeValue]
         public string TocParentVersion
         {
             get { return tocParentVersion; }
@@ -1209,7 +1184,6 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <remarks>The default is -1 to let the build engine determine the best value to use based on the
         /// other project properties.</remarks>
-        [DefaultValue(-1)]
         public int TocOrder
         {
             get { return tocOrder; }
@@ -1254,7 +1228,6 @@ namespace SandcastleBuilder.Utils
         /// referring to framework (SDK) help topics in HTML Help 1 help files.
         /// </summary>
         /// <value>The default is to produce links to online MSDN content</value>
-        [DefaultValue(HtmlSdkLinkType.Msdn)]
         public HtmlSdkLinkType WebsiteSdkLinkType { get; private set; }
 
         #endregion
@@ -1535,10 +1508,10 @@ namespace SandcastleBuilder.Utils
         public event EventHandler DirtyChanged;
 
         /// <summary>
-        /// This raises the <see cref="DirtyChanged"/> event.
+        /// This raises the <see cref="DirtyChanged"/> event
         /// </summary>
         /// <param name="e">The event arguments</param>
-        protected void OnDirtyChanged(EventArgs e)
+        private void OnDirtyChanged(EventArgs e)
         {
             var handler = DirtyChanged;
 
@@ -1547,7 +1520,196 @@ namespace SandcastleBuilder.Utils
         }
         #endregion
 
-        #region Private class methods
+        #region Constructors
+        //=====================================================================
+
+        /// <summary>
+        /// Private constructor
+        /// </summary>
+        private SandcastleProject()
+        {
+            characterMatchEval = new MatchEvaluator(this.OnCharacterMatch);
+            buildVarMatchEval = new MatchEvaluator(this.OnBuildVarMatch);
+
+            removeProjectWhenDisposed = true;
+
+            this.ContentPlacement = ContentPlacement.AboveNamespaces;
+            this.CleanIntermediates = this.KeepLogFile = this.BinaryTOC = true;
+
+            this.BuildLogFile = null;
+
+            this.MissingTags = MissingTags.Summary | MissingTags.Parameter | MissingTags.TypeParameter |
+                MissingTags.Returns | MissingTags.AutoDocumentCtors | MissingTags.Namespace |
+                MissingTags.AutoDocumentDispose;
+
+            this.VisibleItems = VisibleItems.InheritedFrameworkMembers | VisibleItems.InheritedMembers |
+                VisibleItems.Protected | VisibleItems.ProtectedInternalAsProtected;
+
+            this.BuildAssemblerVerbosity = BuildAssemblerVerbosity.OnlyWarningsAndErrors;
+            this.HelpFileFormat = HelpFileFormats.HtmlHelp1;
+            this.HtmlSdkLinkType = this.WebsiteSdkLinkType = HtmlSdkLinkType.Msdn;
+            this.MSHelpViewerSdkLinkType = MSHelpViewerSdkLinkType.Msdn;
+            this.SdkLinkTarget = SdkLinkTarget.Blank;
+            presentationStyle = Constants.DefaultPresentationStyle;
+            syntaxFilters = ComponentUtilities.DefaultSyntaxFilter;
+            helpFileVersion = "1.0.0.0";
+            tocOrder = -1;
+            maximumGroupParts = 2;
+
+            this.OutputPath = null;
+            this.HtmlHelp1xCompilerPath = this.WorkingPath = this.ComponentPath = null;
+
+            this.HelpTitle = this.HtmlHelpName = this.CopyrightHref = this.CopyrightText =
+                this.FeedbackEMailAddress = this.FeedbackEMailLinkText = this.HeaderText = this.FooterText =
+                this.ProjectSummary = this.RootNamespaceTitle = this.TopicVersion = this.TocParentId =
+                this.TocParentVersion = this.CatalogProductId = this.CatalogVersion = this.CatalogName = null;
+            this.FrameworkVersion = null;
+
+            language = new CultureInfo("en-US");
+        }
+
+        /// <summary>
+        /// Load a Sandcastle Builder project from the given filename.
+        /// </summary>
+        /// <param name="filename">The filename to load</param>
+        /// <param name="mustExist">Specify true if the file must exist or false if a new project should be
+        /// created if the file does not exist.</param>
+        /// <exception cref="ArgumentException">This is thrown if a filename is not specified or if it does not
+        /// exist and <c>mustExist</c> is true.</exception>
+        /// <overloads>There are three overloads for the constructor</overloads>
+        public SandcastleProject(string filename, bool mustExist)
+            : this()
+        {
+            string template;
+
+            if(String.IsNullOrEmpty(filename))
+                throw new ArgumentException("A filename must be specified", "filename");
+
+            filename = Path.GetFullPath(filename);
+
+            if(!File.Exists(filename))
+            {
+                if(mustExist)
+                    throw new ArgumentException("The specific file must exist", "filename");
+
+                // Create new project from template file
+                template = Properties.Resources.ProjectTemplate;
+                template = template.Replace("$guid1$", Guid.NewGuid().ToString("B"));
+                template = template.Replace("$safeprojectname$", "Documentation");
+
+                using(StringReader sr = new StringReader(template))
+                {
+                    using(XmlReader xr = XmlReader.Create(sr))
+                    {
+                        msBuildProject = new Project(xr);
+                    }
+                }
+
+                msBuildProject.FullPath = filename;
+            }
+            else
+            {
+                // If already loaded into the global project collection, use the existing instance
+                var loadedProjects = ProjectCollection.GlobalProjectCollection.GetLoadedProjects(filename).ToList();
+
+                if(loadedProjects.Count != 0)
+                {
+                    msBuildProject = loadedProjects[0];
+                    removeProjectWhenDisposed = false;
+                }
+                else
+                    msBuildProject = new Project(filename);
+            }
+
+            this.LoadProperties();
+        }
+
+        /// <summary>
+        /// This is used to create a Sandcastle Builder project from an existing MSBuild project instance
+        /// </summary>
+        /// <param name="existingProject">The existing project instance</param>
+        /// <remarks>It is assumed that the project has been loaded, the property values are current, and that
+        /// the configuration and platform have been set in the MSBuild project global properties in order to
+        /// get the correct final values.</remarks>
+        public SandcastleProject(Project existingProject) : this()
+        {
+            // Do not remove the project from the MSBuild project collection when this is disposed of since we
+            // didn't create it.
+            removeProjectWhenDisposed = false;
+
+            msBuildProject = existingProject;
+
+            this.UsingFinalValues = true;
+            this.LoadProperties();
+        }
+
+        /// <summary>
+        /// This is used to clone an existing project in order to build it without affecting the existing
+        /// project's properties.
+        /// </summary>
+        /// <param name="cloneProject">The project to clone</param>
+        /// <remarks>This is used to perform partial builds where we may want to use alternate property values.</remarks>
+        public SandcastleProject(SandcastleProject cloneProject) : this()
+        {
+            string newName = Guid.NewGuid().ToString();
+
+            cloneProject.EnsureProjectIsCurrent(false);
+            
+            this.UsingFinalValues = true;
+
+            using(StringReader sr = new StringReader(cloneProject.msBuildProject.Xml.RawXml))
+            {
+                using(XmlReader xr = XmlReader.Create(sr))
+                {
+                    msBuildProject = new Project(xr);
+                }
+            }
+
+            // Use the same folder so that relative paths have the same base location.  Use a different filename
+            // to prevent the cloned instance from being unloaded by the build engine.
+            msBuildProject.FullPath = Path.Combine(Path.GetDirectoryName(cloneProject.Filename),
+                newName + ".shfbproj");
+
+            this.Configuration = cloneProject.Configuration;
+            this.Platform = cloneProject.Platform;
+
+            if(!String.IsNullOrEmpty(cloneProject.MSBuildOutDir))
+                this.MSBuildOutDir = cloneProject.MSBuildOutDir;
+
+            this.LoadProperties();
+        }
+        #endregion
+
+        #region IDisposable implementation
+        //=====================================================================
+
+        /// <summary>
+        /// This handles garbage collection to ensure proper disposal of the Sandcastle project if not done
+        /// explicitly with <see cref="Dispose()"/>.
+        /// </summary>
+        ~SandcastleProject()
+        {
+            this.Dispose();
+        }
+
+        /// <summary>
+        /// This properly disposes of the Sandcastle project
+        /// </summary>
+        public void Dispose()
+        {
+            // If we loaded the MSBuild project, we must unload it.  If not, it is cached and will cause problems
+            // if loaded a second time.
+            if(removeProjectWhenDisposed && msBuildProject != null && !String.IsNullOrEmpty(this.Filename))
+            {
+                ProjectCollection.GlobalProjectCollection.UnloadProject(msBuildProject);
+                ProjectCollection.GlobalProjectCollection.UnloadProject(msBuildProject.Xml);
+            }
+
+            GC.SuppressFinalize(this);
+        }
+        #endregion
+
+        #region Private methods
         //=====================================================================
 
         /// <summary>
@@ -1638,8 +1800,6 @@ namespace SandcastleBuilder.Utils
                 if(toolsVersion < 4.0)
                     msBuildProject.Xml.ToolsVersion = "4.0";
 
-                loadingProperties = true;
-
                 if(!this.ProjectPropertyCache.TryGetValue("SHFBSchemaVersion", out property))
                     throw new BuilderException("PRJ0001", "Invalid or missing SHFBSchemaVersion");
 
@@ -1651,6 +1811,8 @@ namespace SandcastleBuilder.Utils
                 if(schemaVersion > SandcastleProject.SchemaVersion)
                     throw new BuilderException("PRJ0002", "The selected file is for a more recent version of " +
                         "the help file builder.  Please upgrade your copy to load the file.");
+
+                loadingProperties = true;
 
                 // Note that many properties don't use the final value as they don't contain variables that
                 // need replacing.
@@ -1814,303 +1976,13 @@ namespace SandcastleBuilder.Utils
 
             property.SetValue(this, parsedValue, null);
         }
-
-        /// <summary>
-        /// Set the value of an MSBuild project property that matches a property on this class by name
-        /// </summary>
-        /// <param name="propertyName">Name of property</param>
-        /// <param name="propertyValue">Value of property</param>
-        /// <exception cref="ArgumentException">This is thrown if the property name is null, an empty string, or
-        /// is not a recognized property name.</exception>
-        private void SetProjectProperty(string propertyName, object propertyValue)
-        {
-            PropertyInfo localProp;
-            DefaultValueAttribute defValue;
-            EscapeValueAttribute escAttr;
-            ProjectProperty projProp;
-            FilePath filePath;
-            string oldValue, newValue;
-
-            // Skip it if loading properties at construction
-            if(loadingProperties)
-                return;
-
-            if(String.IsNullOrEmpty(propertyName))
-                throw new ArgumentNullException("propertyName", "Property name cannot be null or empty");
-
-            if(!propertyCache.TryGetValue(propertyName, out localProp))
-                throw new ArgumentException("Unknown local property name: " + propertyName, "propertyName");
-
-            // Currently there are no configuration-specific project properties.  If that changes, the current
-            // configuration should be set before calling this.  It may also be handled elsewhere and the project
-            // cache will be set to null so that this refreshes it when needed.  See the MPF ProjectNode class
-            // for an example.
-
-            if(!this.ProjectPropertyCache.TryGetValue(propertyName, out projProp))
-                oldValue = null;
-            else
-                oldValue = projProp.UnevaluatedValue;
-
-            if(propertyValue == null)
-            {
-                // If the property is already null, do nothing
-                if(oldValue == null)
-                    return;
-
-                // Otherwise, set it to empty
-                newValue = String.Empty;
-            }
-            else
-            {
-                // FilePath objects should use the PersistablePath property which isn't expanded
-                filePath = propertyValue as FilePath;
-
-                if(filePath != null)
-                    newValue = filePath.PersistablePath;
-                else
-                    newValue = propertyValue.ToString();
-            }
-
-            // If oldValue is null, set it to the default value for the property.  That way it won't get created
-            // if it doesn't need to be.
-            if(oldValue == null)
-            {
-                defValue = pdcCache[propertyName].Attributes[typeof(DefaultValueAttribute)] as DefaultValueAttribute;
-
-                if(defValue != null && defValue.Value != null)
-                    oldValue = defValue.Value.ToString();
-            }
-
-            // Only do the work if this is different to what we had
-            if(String.Compare(oldValue, newValue, StringComparison.Ordinal) != 0)
-            {
-                // Escape the value if necessary
-                escAttr = pdcCache[propertyName].Attributes[typeof(EscapeValueAttribute)] as EscapeValueAttribute;
-
-                if(escAttr != null)
-                    msBuildProject.SetProperty(propertyName, EscapeValueAttribute.Escape(newValue));
-                else
-                    msBuildProject.SetProperty(propertyName, newValue);
-
-                // The cache needs to be refreshed
-                projectPropertyCache = null;
-            }
-        }
         #endregion
 
-        #region Constructors
+        #region Public methods
         //=====================================================================
 
         /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <overloads>There are five overloads for the constructor</overloads>
-        protected SandcastleProject()
-        {
-            characterMatchEval = new MatchEvaluator(this.OnCharacterMatch);
-            buildVarMatchEval = new MatchEvaluator(this.OnBuildVarMatch);
-
-            try
-            {
-                loadingProperties = removeProjectWhenDisposed = true;
-
-                this.ContentPlacement = ContentPlacement.AboveNamespaces;
-                this.CleanIntermediates = this.KeepLogFile = this.BinaryTOC = true;
-
-                this.BuildLogFile = null;
-
-                this.MissingTags = MissingTags.Summary | MissingTags.Parameter | MissingTags.TypeParameter |
-                    MissingTags.Returns | MissingTags.AutoDocumentCtors | MissingTags.Namespace |
-                    MissingTags.AutoDocumentDispose;
-
-                this.VisibleItems = VisibleItems.InheritedFrameworkMembers | VisibleItems.InheritedMembers |
-                    VisibleItems.Protected | VisibleItems.ProtectedInternalAsProtected;
-
-                this.BuildAssemblerVerbosity = BuildAssemblerVerbosity.OnlyWarningsAndErrors;
-                this.HelpFileFormat = HelpFileFormats.HtmlHelp1;
-                this.HtmlSdkLinkType = this.WebsiteSdkLinkType = HtmlSdkLinkType.Msdn;
-                this.MSHelpViewerSdkLinkType = MSHelpViewerSdkLinkType.Msdn;
-                this.SdkLinkTarget = SdkLinkTarget.Blank;
-                presentationStyle = Constants.DefaultPresentationStyle;
-                syntaxFilters = ComponentUtilities.DefaultSyntaxFilter;
-                helpFileVersion = "1.0.0.0";
-                tocOrder = -1;
-                maximumGroupParts = 2;
-
-                this.OutputPath = null;
-                this.HtmlHelp1xCompilerPath = this.WorkingPath = this.ComponentPath = null;
-
-                this.HelpTitle = this.HtmlHelpName = this.CopyrightHref = this.CopyrightText =
-                    this.FeedbackEMailAddress = this.FeedbackEMailLinkText = this.HeaderText = this.FooterText =
-                    this.ProjectSummary = this.RootNamespaceTitle = this.TopicVersion = this.TocParentId =
-                    this.TocParentVersion = this.CatalogProductId = this.CatalogVersion = this.CatalogName = null;
-                this.FrameworkVersion = null;
-
-                language = new CultureInfo("en-US");
-            }
-            finally
-            {
-                loadingProperties = false;
-            }
-        }
-
-        /// <summary>
-        /// Load a Sandcastle Builder project from the given filename.
-        /// </summary>
-        /// <param name="filename">The filename to load</param>
-        /// <param name="mustExist">Specify true if the file must exist or false if a new project should be
-        /// created if the file does not exist.</param>
-        /// <exception cref="ArgumentException">This is thrown if a filename is not specified or if it does not
-        /// exist and <c>mustExist</c> is true.</exception>
-        public SandcastleProject(string filename, bool mustExist) : this()
-        {
-            string template;
-
-            if(String.IsNullOrEmpty(filename))
-                throw new ArgumentException("A filename must be specified", "filename");
-
-            filename = Path.GetFullPath(filename);
-
-            if(!File.Exists(filename))
-            {
-                if(mustExist)
-                    throw new ArgumentException("The specific file must exist", "filename");
-
-                // Create new project from template file
-                template = Properties.Resources.ProjectTemplate;
-                template = template.Replace("$guid1$", Guid.NewGuid().ToString("B"));
-                template = template.Replace("$safeprojectname$", "Documentation");
-
-                using(StringReader sr = new StringReader(template))
-                {
-                    using(XmlReader xr = XmlReader.Create(sr))
-                    {
-                        msBuildProject = new Project(xr);
-                    }
-                }
-
-                msBuildProject.FullPath = filename;
-            }
-            else
-            {
-                // If already loaded into the global project collection, use the existing instance
-                var loadedProjects = ProjectCollection.GlobalProjectCollection.GetLoadedProjects(filename).ToList();
-
-                if(loadedProjects.Count != 0)
-                {
-                    msBuildProject = loadedProjects[0];
-                    removeProjectWhenDisposed = false;
-                }
-                else
-                    msBuildProject = new Project(filename);
-            }
-
-            this.LoadProperties();
-        }
-
-        /// <summary>
-        /// This is used to create a Sandcastle Builder project from an
-        /// existing MSBuild project instance.
-        /// </summary>
-        /// <param name="existingProject">The existing project instance</param>
-        /// <remarks>It is assumed that the project has been loaded, the
-        /// property values are current, and that the configuration and platform
-        /// have been set in the MSBuild project global properties in order to
-        /// get the correct final values.</remarks>
-        public SandcastleProject(Project existingProject) : this()
-        {
-            // Do not remove the project from the MSBuild project collection when this is disposed of since we
-            // didn't create it.
-            removeProjectWhenDisposed = false;
-
-            msBuildProject = existingProject;
-
-            this.UsingFinalValues = true;
-            this.LoadProperties();
-        }
-
-        /// <summary>
-        /// This is used to clone an existing project in order to build it without affecting the existing
-        /// project's properties.
-        /// </summary>
-        /// <param name="cloneProject">The project to clone</param>
-        /// <remarks>This is used to perform partial builds where we may want to use alternate property values.</remarks>
-        public SandcastleProject(SandcastleProject cloneProject) : this()
-        {
-            string newName = Guid.NewGuid().ToString();
-
-            cloneProject.EnsureProjectIsCurrent(false);
-            
-            this.UsingFinalValues = true;
-
-            using(StringReader sr = new StringReader(cloneProject.msBuildProject.Xml.RawXml))
-            {
-                using(XmlReader xr = XmlReader.Create(sr))
-                {
-                    msBuildProject = new Project(xr);
-                }
-            }
-
-            // Use the same folder so that relative paths have the same base location.  Use a different filename
-            // to prevent the cloned instance from being unloaded by the build engine.
-            msBuildProject.FullPath = Path.Combine(Path.GetDirectoryName(cloneProject.Filename),
-                newName + ".shfbproj");
-
-            this.Configuration = cloneProject.Configuration;
-            this.Platform = cloneProject.Platform;
-
-            if(!String.IsNullOrEmpty(cloneProject.MSBuildOutDir))
-                this.MSBuildOutDir = cloneProject.MSBuildOutDir;
-
-            this.LoadProperties();
-        }
-        #endregion
-
-        #region IDisposable implementation
-        //=====================================================================
-
-        /// <summary>
-        /// This handles garbage collection to ensure proper disposal of the Sandcastle project if not done
-        /// explicitly with <see cref="Dispose()"/>.
-        /// </summary>
-        ~SandcastleProject()
-        {
-            this.Dispose(false);
-        }
-
-        /// <summary>
-        /// This implements the Dispose() interface to properly dispose of the Sandcastle project object.
-        /// </summary>
-        /// <overloads>There are two overloads for this method.</overloads>
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// This can be overridden by derived classes to add their own disposal code if necessary.
-        /// </summary>
-        /// <param name="disposing">Pass true to dispose of the managed and unmanaged resources or false to just
-        /// dispose of the unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            // If we loaded the MSBuild project, we must unload it.  If not, it is cached and will cause problems
-            // if loaded a second time.
-            if(removeProjectWhenDisposed && msBuildProject != null && !String.IsNullOrEmpty(this.Filename))
-            {
-                ProjectCollection.GlobalProjectCollection.UnloadProject(msBuildProject);
-                ProjectCollection.GlobalProjectCollection.UnloadProject(msBuildProject.Xml);
-            }
-        }
-        #endregion
-
-        #region Methods, etc.
-        //=====================================================================
-
-        /// <summary>
-        /// This is used to determine the default build action for a file based
-        /// on its extension.
+        /// This is used to determine the default build action for a file based on its extension
         /// </summary>
         /// <param name="filename">The filename to use</param>
         /// <returns>The build action based on the extension</returns>
@@ -2166,11 +2038,10 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This is used to mark the project as dirty and in need of being
-        /// saved.
+        /// This is used to mark the project as dirty and in need of being saved
         /// </summary>
-        /// <event cref="DirtyChanged">This event is raised to let interested
-        /// parties know that the project's dirty state has been changed.</event>
+        /// <event cref="DirtyChanged">This event is raised to let interested parties know that the project's
+        /// dirty state has been changed.</event>
         public void MarkAsDirty()
         {
             // We cannot mark the MSBuild project as dirty as the value sticks and never gets cleared.
@@ -2182,9 +2053,8 @@ namespace SandcastleBuilder.Utils
         /// <summary>
         /// Get a collection containing all user-defined properties
         /// </summary>
-        /// <returns>A collection containing all properties determined not to
-        /// be help file builder project properties, MSBuild build engine
-        /// related properties, or environment variables.</returns>
+        /// <returns>A collection containing all properties determined not to be help file builder project
+        /// properties, MSBuild build engine related properties, or environment variables.</returns>
         public Collection<ProjectProperty> GetUserDefinedProperties()
         {
             Collection<ProjectProperty> userProps = new Collection<ProjectProperty>();
@@ -2200,8 +2070,8 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This is used to determine whether or not the given name can be
-        /// used for a user-defined project property.
+        /// This is used to determine whether or not the given name can be used for a user-defined project
+        /// property.
         /// </summary>
         /// <param name="name">The name to check</param>
         /// <returns>True if it can be used, false if it cannot be used</returns>
@@ -2223,11 +2093,10 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <param name="folder">The folder name</param>
         /// <returns>The new <see cref="FileItem"/>.</returns>
-        /// <remarks>If the folder does not exist in the project, it is added
-        /// and created if not already there.  If the folder is already part of
-        /// the project, the existing item is returned.</remarks>
-        /// <exception cref="ArgumentException">This is thrown if the path
-        /// matches the project root path or is not below it.</exception>
+        /// <remarks>If the folder does not exist in the project, it is added and created if not already there.
+        /// If the folder is already part of the project, the existing item is returned.</remarks>
+        /// <exception cref="ArgumentException">This is thrown if the path matches the project root path or is
+        /// not below it.</exception>
         public FileItem AddFolderToProject(string folder)
         {
             FolderPath folderPath;
@@ -2241,8 +2110,7 @@ namespace SandcastleBuilder.Utils
             if(!Path.IsPathRooted(folder))
                 folder = Path.GetFullPath(Path.Combine(rootPath, folder));
 
-            if(String.Compare(folder, 0, rootPath, 0, rootPath.Length,
-              StringComparison.OrdinalIgnoreCase) != 0)
+            if(String.Compare(folder, 0, rootPath, 0, rootPath.Length, StringComparison.OrdinalIgnoreCase) != 0)
                 throw new ArgumentException("The folder must be below the project's root path", "folder");
 
             if(folder.Length == rootPath.Length)
@@ -2254,7 +2122,8 @@ namespace SandcastleBuilder.Utils
             // Folders don't always have a relative path in the item when first added.  As such, check both the
             // relative and full paths for a match.
             foreach(ProjectItem item in msBuildProject.GetItems(folderAction))
-                if(item.EvaluatedInclude == folderPath.PersistablePath || item.EvaluatedInclude + @"\" == folderPath.PersistablePath ||
+                if(item.EvaluatedInclude == folderPath.PersistablePath ||
+                  item.EvaluatedInclude + @"\" == folderPath.PersistablePath ||
                   item.EvaluatedInclude == folderPath.Path || item.EvaluatedInclude + @"\" == folderPath.Path)
                 {
                     newFileItem = new FileItem(this, item);
@@ -2274,15 +2143,12 @@ namespace SandcastleBuilder.Utils
         /// Add a new file build item to the project
         /// </summary>
         /// <param name="sourceFile">The source filename</param>
-        /// <param name="destFile">The optional destination path.  If empty,
-        /// null, or it does not start with the project folder, the file is
-        /// copied to the root folder of the project.</param>
-        /// <returns>The new <see cref="FileItem" />.</returns>
-        /// <remarks>If the file does not exist in the project, it is copied to
-        /// the destination path or project folder if not already there.  The
-        /// default build action is determined based on the filename's
-        /// extension.  If the file is already part of the project, the
-        /// existing item is returned.</remarks>
+        /// <param name="destFile">The optional destination path.  If empty, null, or it does not start with the
+        /// project folder, the file is copied to the root folder of the project.</param>
+        /// <returns>The new <see cref="FileItem" /></returns>
+        /// <remarks>If the file does not exist in the project, it is copied to the destination path or project
+        /// folder if not already there.  The default build action is determined based on the filename's
+        /// extension.  If the file is already part of the project, the existing item is returned.</remarks>
         public FileItem AddFileToProject(string sourceFile, string destFile)
         {
             BuildAction buildAction;
@@ -2291,8 +2157,7 @@ namespace SandcastleBuilder.Utils
             string[] folders;
             string itemPath, rootPath = Path.GetDirectoryName(msBuildProject.FullPath);
 
-            if(String.IsNullOrEmpty(destFile) || !destFile.StartsWith(rootPath,
-              StringComparison.OrdinalIgnoreCase))
+            if(String.IsNullOrEmpty(destFile) || !destFile.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
                 destFile = Path.Combine(rootPath, Path.GetFileName(sourceFile));
 
             filePath = new FilePath(destFile, this);
@@ -2385,6 +2250,20 @@ namespace SandcastleBuilder.Utils
             return fileItem;
         }
 
+        /// <summary>
+        /// This refreshes the project instance property values by reloading them from the underlying MSBuild
+        /// project.
+        /// </summary>
+        public void RefreshProjectProperties()
+        {
+            this.EnsureProjectIsCurrent(false);
+
+            projectPropertyCache = null;
+            docSources = null;
+
+            this.LoadProperties();
+        }
+
         // TODO: This probably isn't necessary anymore. If removed, make sure the schema version gets updated
         // elsewhere such as in LoadProperties().
         /// <summary>
@@ -2404,7 +2283,7 @@ namespace SandcastleBuilder.Utils
             // TODO: This could probably be put in the docSources_ListChanged() event handler
             if(docSources != null && docSources.IsDirty)
             {
-                this.SetProjectProperty("DocumentationSources", docSources.ToXml());
+                msBuildProject.SetProperty("DocumentationSources", docSources.ToXml());
                 docSources.IsDirty = false;
             }
 
@@ -2467,34 +2346,25 @@ namespace SandcastleBuilder.Utils
         public IEnumerable<ContentFile> ContentFiles(BuildAction buildAction)
         {
             ContentFile contentFile;
-            string linkPath;
+            string metadata;
+            int sortOrder;
 
             foreach(ProjectItem item in msBuildProject.GetItems(buildAction.ToString()))
             {
-                contentFile = new ContentFile(new FilePath(item.UnevaluatedInclude, this));
+                contentFile = new ContentFile(new FilePath(item.EvaluatedInclude, this));
 
-                linkPath = item.GetMetadataValue(BuildItemMetadata.LinkPath);
+                metadata = item.GetMetadataValue(BuildItemMetadata.LinkPath);
 
-                if(!String.IsNullOrWhiteSpace(linkPath))
-                    contentFile.LinkPath = new FilePath(linkPath, this);
+                if(!String.IsNullOrWhiteSpace(metadata))
+                    contentFile.LinkPath = new FilePath(metadata, this);
+
+                metadata = item.GetMetadataValue(BuildItemMetadata.SortOrder);
+
+                if(!String.IsNullOrWhiteSpace(metadata) && Int32.TryParse(metadata, out sortOrder))
+                    contentFile.SortOrder = sortOrder;
 
                 yield return contentFile;
             }
-        }
-
-        /// <summary>
-        /// This refreshes the project instance property values by reloading them from the underlying MSBuild
-        /// project.
-        /// </summary>
-        public void RefreshProjectProperties()
-        {
-            this.EnsureProjectIsCurrent(false);
-
-            loadingProperties = true;
-            projectPropertyCache = null;
-            docSources = null;
-
-            this.LoadProperties();
         }
         #endregion
     }

@@ -295,7 +295,8 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             this.CreateConceptualManifest(builder);
         }
 
-        // TODO: This can eventually go away as the collections will be exposed as IList<T> properties
+        // TODO: This can eventually go away as the collections will be exposed as IList<T> properties.
+        // TopicCollection needs some work first since the topics use FileItem instances.
         /// <summary>
         /// This method can be used by plug-ins to merge content from another Sandcastle Help File Builder
         /// project file.

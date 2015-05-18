@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : MainForm.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/10/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -49,6 +49,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Microsoft.Build.Exceptions;
@@ -77,8 +78,8 @@ namespace SandcastleBuilder.Gui
         //=====================================================================
 
         private SandcastleProject project;
-        private Thread buildThread;
         private BuildProcess buildProcess;
+        private CancellationTokenSource cancellationTokenSource;
         private Process webServer;
         private ProjectExplorerWindow projectExplorer;
         private ProjectPropertiesWindow projectProperties;
@@ -763,7 +764,7 @@ namespace SandcastleBuilder.Gui
             BaseContentEditor content;
             string state;
 
-            if(buildThread != null && buildThread.IsAlive)
+            if(cancellationTokenSource != null)
             {
                 if(MessageBox.Show("A build is currently taking place.  Do you want to abort it and exit?",
                   Constants.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
@@ -917,56 +918,12 @@ namespace SandcastleBuilder.Gui
         }
 
         /// <summary>
-        /// This is called by the build process thread to update the main window with the current build step
+        /// This is used to report build progress
         /// </summary>
-        /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildStepChanged(object sender, BuildProgressEventArgs e)
+        private void buildProcess_ReportProgress(BuildProgressEventArgs e)
         {
-            if(this.InvokeRequired)
-            {
-                // Ignore it if we've already shut down or it hasn't
-                // completed yet.
-                if(!this.IsDisposed)
-                    this.Invoke(new EventHandler<BuildProgressEventArgs>(buildProcess_BuildStepChanged),
-                        new object[] { sender, e });
-            }
-            else
-            {
-                if(!Settings.Default.VerboseLogging)
-                    outputWindow.AppendText(e.BuildStep.ToString());
-
-                if(e.HasCompleted)
-                {
-                    StatusBarTextProvider.ResetProgressBar();
-                    this.SetUIEnabledState(true);
-                    outputWindow.LogFile = buildProcess.LogFilename;
-
-                    buildThread = null;
-                    buildProcess = null;
-
-                    if(e.BuildStep == BuildStep.Completed && Settings.Default.OpenHelpAfterBuild)
-                        miViewHelpFile.PerformClick();
-                }
-            }
-        }
-
-        /// <summary>
-        /// This is called by the build process thread to update the main window with information about its
-        /// progress.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildProgress(object sender, BuildProgressEventArgs e)
-        {
-            if(this.InvokeRequired)
-            {
-                // Ignore it if we've already shut down
-                if(!this.IsDisposed)
-                    this.Invoke(new EventHandler<BuildProgressEventArgs>(buildProcess_BuildProgress),
-                        new object[] { sender, e });
-            }
-            else
+            if(!this.IsDisposed)
             {
                 if(e.BuildStep < BuildStep.Completed)
                     StatusBarTextProvider.UpdateProgress((int)e.BuildStep);
@@ -975,8 +932,11 @@ namespace SandcastleBuilder.Gui
                     outputWindow.AppendText(e.Message);
                 else
                 {
-                    // If not doing verbose logging, show warnings and let MSBuild filter them out if not
-                    // wanted.  Errors will kill the build so we don't have to deal with them here.
+                    if(e.StepChanged)
+                        outputWindow.AppendText(e.BuildStep.ToString());
+
+                    // If not doing verbose logging, show warnings.  Errors will kill the build so we don't have to
+                    // deal with them here.
                     if(reWarning.IsMatch(e.Message))
                         outputWindow.AppendText(e.Message);
                 }
@@ -1177,7 +1137,7 @@ namespace SandcastleBuilder.Gui
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void miBuildProject_Click(object sender, EventArgs e)
+        private async void miBuildProject_Click(object sender, EventArgs e)
         {
             if(project == null || !this.SaveBeforeBuild())
                 return;
@@ -1186,16 +1146,37 @@ namespace SandcastleBuilder.Gui
             this.SetUIEnabledState(false);
             Application.DoEvents();
 
-            buildProcess = new BuildProcess(project);
-            buildProcess.BuildStepChanged += buildProcess_BuildStepChanged;
-            buildProcess.BuildProgress += buildProcess_BuildProgress;
-
             StatusBarTextProvider.InitializeProgressBar(0, (int)BuildStep.Completed, "Building help file");
 
-            buildThread = new Thread(new ThreadStart(buildProcess.Build));
-            buildThread.Name = "Help file builder thread";
-            buildThread.IsBackground = true;
-            buildThread.Start();
+            try
+            {
+                cancellationTokenSource = new CancellationTokenSource();
+
+                buildProcess = new BuildProcess(project)
+                {
+                    ProgressReportProvider = new Progress<BuildProgressEventArgs>(buildProcess_ReportProgress),
+                    CancellationToken = cancellationTokenSource.Token,
+                };
+
+                await Task.Run(() => buildProcess.Build(), cancellationTokenSource.Token);
+            }
+            finally
+            {
+                if(cancellationTokenSource != null)
+                {
+                    cancellationTokenSource.Dispose();
+                    cancellationTokenSource = null;
+                }
+
+                StatusBarTextProvider.ResetProgressBar();
+                this.SetUIEnabledState(true);
+                outputWindow.LogFile = buildProcess.LogFilename;
+
+                if(buildProcess.CurrentBuildStep == BuildStep.Completed && Settings.Default.OpenHelpAfterBuild)
+                    miViewHelpFile.PerformClick();
+
+                buildProcess = null;
+            }
         }
 
         /// <summary>
@@ -1205,25 +1186,27 @@ namespace SandcastleBuilder.Gui
         /// <param name="e">The event arguments</param>
         private void miCancelBuild_Click(object sender, EventArgs e)
         {
-            if(buildThread != null && buildThread.IsAlive)
+            if(cancellationTokenSource != null)
             {
+                if(cancellationTokenSource != null)
+                    cancellationTokenSource.Cancel();
+
                 try
                 {
-                    this.Cursor = Cursors.WaitCursor;
+                    Cursor.Current = Cursors.WaitCursor;
                     StatusBarTextProvider.UpdateProgress("Cancelling build...");
-                    buildThread.Abort();
 
-                    while(buildThread != null && !buildThread.Join(1000))
+                    while(buildProcess != null && buildProcess.CurrentBuildStep < BuildStep.Completed)
+                    {
                         Application.DoEvents();
+                        Thread.Sleep(100);
+                    }
 
                     StatusBarTextProvider.ResetProgressBar();
-                    System.Diagnostics.Debug.WriteLine("Thread stopped");
                 }
                 finally
                 {
-                    this.Cursor = Cursors.Default;
-                    buildThread = null;
-                    buildProcess = null;
+                    Cursor.Current = Cursors.Default;
                 }
             }
 

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : AdditionalReferenceLinksPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/03/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -15,14 +15,14 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
-//===============================================================================================================
-// 1.6.0.5  02/25/2008  EFW  Created the code
-// 1.8.0.0  08/13/2008  EFW  Updated to support the new project format
-// 1.9.0.0  06/07/2010  EFW  Added support for multi-format build output
-// 1.9.7.0  01/01/2013  EFW  Updated for use with the new cached build components.  Added code to insert the
-//                           reflection file names into the GenerateInheritedDocs tool configuration file.
-// -------  12/17/2013  EFW  Updated to use MEF for the plug-ins
+//    Date     Who  Comments
+// ==============================================================================================================
+// 02/25/2008  EFW  Created the code
+// 08/13/2008  EFW  Updated to support the new project format
+// 06/07/2010  EFW  Added support for multi-format build output
+// 01/01/2013  EFW  Updated for use with the new cached build components.  Added code to insert the reflection
+//                  file names into the GenerateInheritedDocs tool configuration file.
+// 12/17/2013  EFW  Updated to use MEF for the plug-ins
 //===============================================================================================================
 
 using System;
@@ -159,34 +159,20 @@ namespace SandcastleBuilder.PlugIns
                 // Build each of the projects
                 foreach(ReferenceLinkSettings vs in otherLinks)
                 {
-                    using(SandcastleProject tempProject = new SandcastleProject(vs.HelpFileProject, true))
+                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true))
                     {
-                        // Set the configuration and platform here so that they are evaluated properly in project
-                        // properties when the project is loaded below.
-                        tempProject.Configuration = builder.CurrentProject.Configuration;
-                        tempProject.Platform = builder.CurrentProject.Platform;
+                        // We'll use a working folder below the current project's working folder
+                        workingPath = builder.WorkingFolder + vs.HelpFileProject.GetHashCode().ToString("X",
+                            CultureInfo.InvariantCulture) + "\\";
 
-                        // This looks odd but is necessary.  If we are in Visual Studio, the above constructor
-                        // may return an instance that uses an underlying MSBuild project loaded in Visual
-                        // Studio.  Since the BuildProject() method modifies the project, those changes are
-                        // propagated to the Visual Studio copy which we do not want to happen.  As such, we use
-                        // this constructor to clone the MSBuild project XML thus avoiding modifications to the
-                        // original project.
-                        using(SandcastleProject project = new SandcastleProject(tempProject))
-                        {
-                            // We'll use a working folder below the current project's working folder
-                            workingPath = builder.WorkingFolder + vs.HelpFileProject.GetHashCode().ToString("X",
-                                CultureInfo.InvariantCulture) + "\\";
+                        success = this.BuildProject(project, workingPath);
 
-                            success = this.BuildProject(project, workingPath);
+                        // Switch back to the original folder for the current project
+                        Directory.SetCurrentDirectory(builder.ProjectFolder);
 
-                            // Switch back to the original folder for the current project
-                            Directory.SetCurrentDirectory(builder.ProjectFolder);
-
-                            if(!success)
-                                throw new BuilderException("ARL0003", "Unable to build additional target " +
-                                    "project: " + project.Filename);
-                        }
+                        if(!success)
+                            throw new BuilderException("ARL0003", "Unable to build additional target project: " +
+                                project.Filename);
                     }
 
                     // Save the reflection file location as we need it later
@@ -410,6 +396,9 @@ namespace SandcastleBuilder.PlugIns
 
             try
             {
+                project.Configuration = builder.CurrentProject.Configuration;
+                project.Platform = builder.CurrentProject.Platform;
+
                 // For the plug-in, we'll override some project settings
                 project.HtmlHelp1xCompilerPath = new FolderPath(builder.Help1CompilerFolder, true, project);
                 project.WorkingPath = new FolderPath(workingPath, true, project);
@@ -423,9 +412,10 @@ namespace SandcastleBuilder.PlugIns
 
                 // Run the partial build through the transformation step as we need the document model
                 // applied and filenames added.
-                buildProcess = new BuildProcess(project, PartialBuildType.TransformReflectionInfo);
-
-                buildProcess.BuildStepChanged += buildProcess_BuildStepChanged;
+                buildProcess = new BuildProcess(project, PartialBuildType.TransformReflectionInfo)
+                {
+                    ProgressReportProvider = new Progress<BuildProgressEventArgs>(buildProcess_ReportProgress)
+                };
 
                 // Since this is a plug-in, we'll run it directly rather than in a background thread
                 buildProcess.Build();
@@ -445,14 +435,16 @@ namespace SandcastleBuilder.PlugIns
         }
 
         /// <summary>
-        /// This is called by the build process thread to update the application with the current build step.
+        /// This is used to report build progress
         /// </summary>
-        /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void buildProcess_BuildStepChanged(object sender, BuildProgressEventArgs e)
+        private void buildProcess_ReportProgress(BuildProgressEventArgs e)
         {
-            builder.ReportProgress(e.BuildStep.ToString());
-            lastBuildStep = e.BuildStep;
+            if(e.StepChanged)
+            {
+                builder.ReportProgress(e.BuildStep.ToString());
+                lastBuildStep = e.BuildStep;
+            }
         }
         #endregion
     }

@@ -174,7 +174,8 @@ namespace SandcastleBuilder.PlugIns
             node = root.SelectSingleNode("xslTransform");
 
             if(node != null)
-                xslTransformFile = builder.TransformText(node.GetAttribute("filename", String.Empty).Trim());
+                xslTransformFile = builder.SubsitutionTags.TransformText(node.GetAttribute("filename",
+                    String.Empty).Trim());
 
             if((!credentials.UseDefaultCredentials && (credentials.UserName.Length == 0 ||
               credentials.Password.Length == 0)) || failureEMailAddress.Length == 0)

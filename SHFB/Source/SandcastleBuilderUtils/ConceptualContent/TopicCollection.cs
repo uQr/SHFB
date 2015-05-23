@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : TopicCollection.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -13,14 +13,14 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.6.0.7  04/24/2008  EFW  Created the code
-// 1.8.0.0  08/07/2008  EFW  Modified for use with the new project format
-// 1.9.0.0  06/06/2010  EFW  Added support for multi-format build output
-// 1.9.1.0  07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0.
-// 1.9.3.3  12/15/2011  EFW  Updated for use with the new content layout editor
-// 1.9.7.0  01/01/2013  EFW  Added support for getting referenced namespaces from the topics
+// 04/24/2008  EFW  Created the code
+// 08/07/2008  EFW  Modified for use with the new project format
+// 06/06/2010  EFW  Added support for multi-format build output
+// 07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0.
+// 12/15/2011  EFW  Updated for use with the new content layout editor
+// 01/01/2013  EFW  Added support for getting referenced namespaces from the topics
 //===============================================================================================================
 
 using System;
@@ -48,7 +48,8 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         #region Private data members
         //=====================================================================
 
-        private FileItem fileItem;
+        private ContentFile contentLayoutFile;
+
         #endregion
 
         #region Properties
@@ -160,12 +161,12 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="file">The content layout file associated with the collection</param>
+        /// <param name="contentLayoutFile">The content layout file associated with the collection</param>
         /// <remarks>Topics are not loaded until the <see cref="Load" /> method is called.  If the <c>file</c>
         /// parameter is null, this is assumed to be a child topic collection.</remarks>
-        public TopicCollection(FileItem file)
+        public TopicCollection(ContentFile contentLayoutFile)
         {
-            fileItem = file;
+            this.contentLayoutFile = contentLayoutFile;
         }
         #endregion
 
@@ -251,7 +252,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 this.Clear();
                 settings.CloseInput = true;
 
-                xr = XmlReader.Create(fileItem.FullPath, settings);
+                xr = XmlReader.Create(contentLayoutFile.FullPath, settings);
                 xr.MoveToContent();
 
                 // These are old options from versions prior to 1.9.0.0
@@ -303,26 +304,21 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         public void MatchProjectFilesToTopics()
         {
-            SandcastleProject project = fileItem.Project;
-            FileItem topicItem;
             TopicFile topicFile;
+            string ext;
 
-            string ext, none = BuildAction.None.ToString();
+            foreach(var contentFile in contentLayoutFile.ContentFileProvider.ContentFiles(BuildAction.None))
+            {
+                ext = Path.GetExtension(contentFile.Filename).ToLowerInvariant();
 
-            foreach(ProjectItem item in project.MSBuildProject.AllEvaluatedItems)
-                if(item.ItemType == none)
+                if(ext == ".aml")
                 {
-                    ext = Path.GetExtension(item.EvaluatedInclude).ToLowerInvariant();
+                    topicFile = new TopicFile(contentFile);
 
-                    if(ext == ".aml")
-                    {
-                        topicItem = new FileItem(project, item);
-                        topicFile = new TopicFile(topicItem);
-
-                        if(topicFile.Id != null)
-                            this.SetTopic(topicFile);
-                    }
+                    if(topicFile.Id != null)
+                        this.SetTopic(topicFile);
                 }
+            }
         }
 
         /// <summary>
@@ -337,7 +333,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             {
                 settings.Indent = true;
                 settings.CloseOutput = true;
-                writer = XmlWriter.Create(fileItem.FullPath, settings);
+                writer = XmlWriter.Create(contentLayoutFile.FullPath, settings);
 
                 writer.WriteStartDocument();
                 writer.WriteStartElement("Topics");
@@ -524,7 +520,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     // Add the file to the project
                     newItem = project.AddFileToProject(file, newPath);
                     topic = new Topic();
-                    topic.TopicFile = new TopicFile(newItem);
+                    topic.TopicFile = new TopicFile(newItem.ToContentFile());
 
                     if(topic.DocumentType > DocumentType.Invalid)
                         this.Add(topic);
@@ -604,40 +600,31 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         #region ITableOfContents implementation
         //=====================================================================
 
-        /// <summary>
-        /// This is used to get the build item related to the content layout file containing the collection items
-        /// </summary>
-        public FileItem ContentLayoutFile
+        /// <inheritdoc />
+        public ContentFile ContentLayoutFile
         {
-            get { return fileItem; }
+            get { return contentLayoutFile; }
         }
 
-        /// <summary>
-        /// Generate the table of contents for the conceptual topics
-        /// </summary>
-        /// <param name="toc">The table of contents collection</param>
-        /// <param name="pathProvider">The base path provider</param>
-        /// <param name="includeInvisibleItems">True to include items marked invisible (useful for previewing)
-        /// or false to exclude them.</param>
-        public void GenerateTableOfContents(TocEntryCollection toc, IBasePathProvider pathProvider,
-          bool includeInvisibleItems)
+        /// <inheritdoc />
+        public void GenerateTableOfContents(TocEntryCollection toc, bool includeInvisibleItems)
         {
             TocEntry entry;
 
             foreach(Topic t in this)
                 if(t.Visible || includeInvisibleItems)
                 {
-                    entry = new TocEntry(pathProvider);
+                    entry = new TocEntry(t.TopicFile.ContentFile.BasePathProvider);
 
                     if(t.TopicFile != null)
                     {
-                        entry.SourceFile = new FilePath(t.TopicFile.FullPath, pathProvider);
+                        entry.SourceFile = new FilePath(t.TopicFile.FullPath, t.TopicFile.ContentFile.BasePathProvider);
                         entry.DestinationFile = "html\\" + t.Id + ".htm";
                     }
 
                     entry.Id = t.Id;
-                    entry.PreviewerTitle = String.IsNullOrEmpty(t.Title) ?
-                        Path.GetFileNameWithoutExtension(t.TopicFilename) : t.Title;
+                    entry.PreviewerTitle = !String.IsNullOrEmpty(t.Title) ? t.Title :
+                        Path.GetFileNameWithoutExtension(t.TopicFilename);
                     entry.LinkText = String.IsNullOrEmpty(t.LinkText) ? t.DisplayTitle : t.LinkText;
                     entry.Title = t.DisplayTitle;
                     entry.IsDefaultTopic = t.IsDefaultTopic;
@@ -646,7 +633,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     entry.IsSelected = t.IsSelected;
 
                     if(t.Subtopics.Count != 0)
-                        t.Subtopics.GenerateTableOfContents(entry.Children, pathProvider, includeInvisibleItems);
+                        t.Subtopics.GenerateTableOfContents(entry.Children, includeInvisibleItems);
 
                     toc.Add(entry);
                 }

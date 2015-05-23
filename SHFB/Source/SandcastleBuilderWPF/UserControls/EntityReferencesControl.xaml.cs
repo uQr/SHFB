@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder WPF Controls
 // File    : EntityReferencesControl.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -271,7 +271,6 @@ namespace SandcastleBuilder.WPF.UserControls
         /// </summary>
         private List<EntityReference> LoadTableOfContentsInfo()
         {
-            FileItemCollection contentLayoutFiles, siteMapFiles;
             List<ITableOfContents> tocFiles;
             TopicCollection contentLayout;
             TocEntryCollection siteMap, mergedToc;
@@ -289,18 +288,15 @@ namespace SandcastleBuilder.WPF.UserControls
 
             try
             {
-                // Get the content layout and site map files
-                contentLayoutFiles = new FileItemCollection(currentProject, BuildAction.ContentLayout);
-                siteMapFiles = new FileItemCollection(currentProject, BuildAction.SiteMap);
                 tocFiles = new List<ITableOfContents>();
 
-                // Add the conceptual content layout files
-                foreach(FileItem file in contentLayoutFiles)
+                // Load all content layout files and add them to the list
+                foreach(var contentFile in currentProject.ContentFiles(BuildAction.ContentLayout))
                 {
                     // If open in an editor, use the edited values
-                    if(!args.ContentLayoutFiles.TryGetValue(file.FullPath, out contentLayout))
+                    if(!args.ContentLayoutFiles.TryGetValue(contentFile.FullPath, out contentLayout))
                     {
-                        contentLayout = new TopicCollection(file);
+                        contentLayout = new TopicCollection(contentFile);
                         contentLayout.Load();
                     }
 
@@ -308,22 +304,21 @@ namespace SandcastleBuilder.WPF.UserControls
                 }
 
                 // Load all site maps and add them to the list
-                foreach(FileItem fileItem in siteMapFiles)
+                foreach(var contentFile in currentProject.ContentFiles(BuildAction.SiteMap))
                 {
                     // If open in an editor, use the edited values
-                    if(!args.SiteMapFiles.TryGetValue(fileItem.FullPath, out siteMap))
+                    if(!args.SiteMapFiles.TryGetValue(contentFile.FullPath, out siteMap))
                     {
-                        siteMap = new TocEntryCollection(fileItem);
+                        siteMap = new TocEntryCollection(contentFile);
                         siteMap.Load();
                     }
 
                     tocFiles.Add(siteMap);
                 }
 
-                // Sort the files
                 tocFiles.Sort((x, y) =>
                 {
-                    FileItem fx = x.ContentLayoutFile, fy = y.ContentLayoutFile;
+                    ContentFile fx = x.ContentLayoutFile, fy = y.ContentLayoutFile;
 
                     if(fx.SortOrder < fy.SortOrder)
                         return -1;
@@ -331,15 +326,15 @@ namespace SandcastleBuilder.WPF.UserControls
                     if(fx.SortOrder > fy.SortOrder)
                         return 1;
 
-                    return String.Compare(fx.Name, fy.Name, StringComparison.OrdinalIgnoreCase);
+                    return String.Compare(fx.Filename, fy.Filename, StringComparison.OrdinalIgnoreCase);
                 });
 
-                // Create the merged TOC.  For the purpose of adding links, we'll include everything
-                // even topics marked as invisible.
+                // Create the merged TOC.  For the purpose of adding links, we'll include everything even topics
+                // marked as invisible.
                 mergedToc = new TocEntryCollection();
 
                 foreach(ITableOfContents file in tocFiles)
-                    file.GenerateTableOfContents(mergedToc, currentProject, true);
+                    file.GenerateTableOfContents(mergedToc, true);
 
                 // Convert the TOC info to entity references
                 foreach(var t in mergedToc)

@@ -98,7 +98,7 @@ namespace SandcastleBuilder.Utils
         /// <param name="project">The project that owns the item</param>
         /// <param name="existingItem">The existing item</param>
         /// <overloads>There are two overloads for the constructor</overloads>
-        protected internal ProjectElement(SandcastleProject project, ProjectItem existingItem)
+        protected ProjectElement(SandcastleProject project, ProjectItem existingItem)
         {
             if(project == null)
                 throw new ArgumentNullException("project");
@@ -117,7 +117,7 @@ namespace SandcastleBuilder.Utils
         /// <param name="itemType">The type of build item to create</param>
         /// <param name="itemPath">The path to the item.  This can be relative or absolute and may contain
         /// variable references.</param>
-        protected internal ProjectElement(SandcastleProject project, string itemType, string itemPath)
+        protected ProjectElement(SandcastleProject project, string itemType, string itemPath)
         {
             if(project == null)
                 throw new ArgumentNullException("project");

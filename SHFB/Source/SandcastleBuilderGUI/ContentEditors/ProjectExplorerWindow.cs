@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : ProjectExplorerWindow.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -495,7 +495,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 this.LoadReferences(true);
 
                 // Load the folders and files
-                fileTree.LoadTree(currentProject.FileItems);
+                fileTree.LoadTree(currentProject.FileItems.ToList());
                 root.Expand();
             }
             finally
@@ -1409,7 +1409,6 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void miNewFolder_Click(object sender, EventArgs e)
         {
-            Collection<FileItem> toAdd = new Collection<FileItem>();
             TreeNode parent = tvProjectFiles.SelectedNode;
             TreeNode[] matches;
             FileItem folderItem;
@@ -1448,14 +1447,13 @@ namespace SandcastleBuilder.Gui.ContentEditors
             do
             {
                 uniqueId++;
-                newFolder = Path.Combine(path, "NewFolder" +
-                    uniqueId.ToString(CultureInfo.InvariantCulture));
+                newFolder = Path.Combine(path, "NewFolder" + uniqueId.ToString(CultureInfo.InvariantCulture));
 
             } while(Directory.Exists(newFolder));
 
             folderItem = currentProject.AddFolderToProject(newFolder);
-            toAdd.Add(folderItem);
-            fileTree.LoadTree(toAdd);
+
+            fileTree.LoadTree(new[] { folderItem });
 
             if(parent == null)
                 matches = tvProjectFiles.Nodes[0].Nodes.Find(folderItem.IncludePath.PersistablePath, false);
@@ -1630,8 +1628,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                             foreach(string file in dlg.FileNames)
                             {
                                 newPath = Path.Combine(path, Path.GetFileName(file));
-                                fileItem = currentProject.AddFileToProject(file,
-                                    newPath);
+                                fileItem = currentProject.AddFileToProject(file, newPath);
                                 toAdd.Add(fileItem);
                             }
 
@@ -1769,7 +1766,6 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void templateFile_OnClick(object sender, EventArgs e)
         {
-            Collection<FileItem> toAdd = new Collection<FileItem>();
             ToolStripItem miSelection = (ToolStripItem)sender;
             TreeNode parent = tvProjectFiles.SelectedNode;
             NodeData nodeData;
@@ -1818,11 +1814,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     {
                         Cursor.Current = Cursors.WaitCursor;
 
-                        fileItem = currentProject.AddFileToProject(file,
-                            dlg.FileName);
-                        toAdd.Add(fileItem);
-
-                        fileTree.LoadTree(toAdd);
+                        fileItem = currentProject.AddFileToProject(file, dlg.FileName);
+                        fileTree.LoadTree(new[] { fileItem });
 
                         // If it's a conceptual content topic file, set the unique ID in it
                         if(isConceptual)

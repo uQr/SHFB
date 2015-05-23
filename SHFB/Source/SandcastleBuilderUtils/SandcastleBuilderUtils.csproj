@@ -102,13 +102,14 @@
     <Compile Include="BuildEngine\SubstitutionTagReplacement.cs" />
     <Compile Include="BuildItemMetadata.cs" />
     <Compile Include="ConceptualContent\ContentFile.cs" />
+    <Compile Include="ConceptualContent\IContentFileProvider.cs" />
     <Compile Include="Design\SubstitutionTagAttribute.cs" />
     <Compile Include="BuilderException.cs" />
     <Compile Include="BuildEngine\BuildProcess.HelpFileUtils.cs" />
     <Compile Include="BuildEngine\BuildProcess.NamespaceRipping.cs" />
     <Compile Include="BuildEngine\BuildProcess.Namespaces.cs" />
     <Compile Include="BuildEngine\BuildProcess.PlugIns.cs" />
-    <Compile Include="BuildEngine\BuildProcess.Transform.cs" />
+    <Compile Include="BuildEngine\BuildProcess.ConfigFiles.cs" />
     <Compile Include="BuildEngine\BuildProgressEventArgs.cs" />
     <Compile Include="BuildEngine\BuildProcess.cs" />
     <Compile Include="BuildEngine\BuildStep.cs" />
@@ -432,7 +433,6 @@
       <DependentUpon>NamespaceSummaryItemEditorDlg.cs</DependentUpon>
     </Compile>
     <Compile Include="FileItem.cs" />
-    <Compile Include="FileItemCollection.cs" />
     <Compile Include="HtmlSdkLinkType.cs" />
     <Compile Include="MSBuild\BuildHelpViewerFile.cs" />
     <Compile Include="MSHelpViewerSdkLinkType.cs" />

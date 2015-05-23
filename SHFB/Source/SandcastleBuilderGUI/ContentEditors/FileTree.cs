@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : FileTree.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/03/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -157,7 +157,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// Load the tree with the folder and file items
         /// </summary>
         /// <param name="files">The folder and file build items from the project</param>
-        public void LoadTree(Collection<FileItem> files)
+        public void LoadTree(IList<FileItem> files)
         {
             SortedDictionary<string, FileItem> fileItems = new SortedDictionary<string,FileItem>();
             List<string> folderNames = new List<string>(), additionalFolders = new List<string>();

@@ -53,6 +53,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
         private MatchEvaluator excludeElementEval;
         #endregion
 
+        // TODO: Remove this section and put it in a plug-in
+
         /// <summary>
         /// Apply the project's Visibility category properties to the given reflection information file
         /// </summary>

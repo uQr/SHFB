@@ -1,24 +1,22 @@
-﻿//=============================================================================
+﻿//===============================================================================================================
 // System  : Sandcastle Help File Builder Visual Studio Package
 // File    : ContentLayoutFileEditorPane.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 03/25/2012
-// Note    : Copyright 2011-2012, Eric Woodruff, All rights reserved
+// Updated : 05/17/2015
+// Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
-// This file contains a class used to host the content layout file editor
-// control.
+// This file contains a class used to host the content layout file editor control
 //
-// This code is published under the Microsoft Public License (Ms-PL).  A copy
-// of the license should be distributed with the code.  It can also be found
-// at the project website: https://GitHub.com/EWSoftware/SHFB.  This notice, the
-// author's name, and all copyright notices must remain intact in all
-// applications, documentation, and source files.
+// This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
+// distributed with the code and can be found at the project website: https://GitHub.com/EWSoftware/SHFB.  This
+// notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
+// and source files.
 //
-// Version     Date     Who  Comments
-// ============================================================================
-// 1.9.3.3  12/26/2011  EFW  Created the code
-//=============================================================================
+//    Date     Who  Comments
+// ==============================================================================================================
+// 12/26/2011  EFW  Created the code
+//===============================================================================================================
 
 using System;
 using System.IO;
@@ -109,8 +107,7 @@ namespace SandcastleBuilder.Package.Editors
         /// Add a new topic file to the editor
         /// </summary>
         /// <param name="filename">The filename of the topic to add</param>
-        /// <param name="addAsChild">True to add as a child of the selected
-        /// topic or false to add it as a sibling.</param>
+        /// <param name="addAsChild">True to add as a child of the selected topic or false to add it as a sibling</param>
         /// <returns>The topic that was just added or null if unsuccessful</returns>
         private Topic AddTopicFile(string filename, bool addAsChild)
         {
@@ -128,7 +125,7 @@ namespace SandcastleBuilder.Package.Editors
             // Add the topic to the editor's collection
             newTopic = new Topic
             {
-                TopicFile = new TopicFile(newItem)
+                TopicFile = new TopicFile(newItem.ToContentFile())
             };
 
             if(addAsChild && currentTopic != null)
@@ -235,10 +232,9 @@ namespace SandcastleBuilder.Package.Editors
                             newPath = Path.Combine(projectPath, Path.GetFileName(newPath));
 
                         // Add the file to the project if not already there
-                        newItem = contentLayoutFile.Project.AddFileToProject(
-                            dlg.FileName, newPath);
+                        newItem = contentLayoutFile.Project.AddFileToProject(dlg.FileName, newPath);
 
-                        t.TopicFile = new TopicFile(newItem);
+                        t.TopicFile = new TopicFile(newItem.ToContentFile());
 
                         // Let the caller know we associated a file with the topic
                         e.Handled = true;

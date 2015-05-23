@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : TopicFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/08/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -37,7 +37,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         #region Private data members
         //=====================================================================
 
-        private FileItem fileItem;
+        private ContentFile contentFile;
         private DocumentType docType;
         private string id, errorMessage;
         private int revision;
@@ -50,12 +50,12 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get or set the file build item
         /// </summary>
-        public FileItem FileItem
+        public ContentFile ContentFile
         {
-            get { return fileItem; }
+            get { return contentFile; }
             set
             {
-                fileItem = value;
+                contentFile = value;
                 contentParsed = false;
                 docType = DocumentType.None;
             }
@@ -66,7 +66,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         public string Name
         {
-            get { return fileItem.Name; }
+            get { return contentFile.Filename; }
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         public string FullPath
         {
-            get { return fileItem.FullPath; }
+            get { return contentFile.FullPath; }
         }
 
         /// <summary>
@@ -129,14 +129,15 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="file">The file build item from the project</param>
-        /// <exception cref="ArgumentNullException">This is thrown if the file item is null</exception>
-        public TopicFile(FileItem file)
+        /// <param name="contentFile">The content file from the project</param>
+        /// <exception cref="ArgumentNullException">This is thrown if the content file is null</exception>
+        public TopicFile(ContentFile contentFile)
         {
-            if(file == null)
-                throw new ArgumentNullException("file");
+            if(contentFile == null)
+                throw new ArgumentNullException("contentFile");
 
-            fileItem = file;
+            this.contentFile = contentFile;
+
             revision = 1;
         }
         #endregion
@@ -164,7 +165,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             id = errorMessage = null;
             revision = 1;
 
-            if(!File.Exists(fileItem.FullPath))
+            if(!File.Exists(contentFile.FullPath))
             {
                 docType = DocumentType.NotFound;
                 return;
@@ -177,7 +178,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 settings.IgnoreProcessingInstructions = true;
                 settings.IgnoreWhitespace = true;
 
-                xr = XmlReader.Create(fileItem.FullPath, settings);
+                xr = XmlReader.Create(contentFile.FullPath, settings);
                 xr.MoveToContent();
 
                 while(!xr.EOF)
@@ -256,7 +257,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <returns>An enumerable list of unique namespaces in the topic</returns>
         public IEnumerable<string> GetReferencedNamespaces(string reflectionDataPath)
         {
-            XPathDocument doc = new XPathDocument(fileItem.FullPath);
+            XPathDocument doc = new XPathDocument(contentFile.FullPath);
             XPathNavigator nav = doc.CreateNavigator();
             XmlNamespaceManager nsMgr = new XmlNamespaceManager(nav.NameTable);
             nsMgr.AddNamespace("ddue", "http://ddue.schemas.microsoft.com/authoring/2003/5"); 

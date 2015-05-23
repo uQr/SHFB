@@ -139,7 +139,7 @@ namespace SandcastleBuilder.PlugIns
             {
                 // If relative, the path is relative to the project folder
                 sbAppLocalePath = FilePath.RelativeToAbsolutePath(builder.ProjectFolder,
-                    builder.TransformText(sbAppLocalePath));
+                    builder.SubsitutionTags.TransformText(sbAppLocalePath));
 
                 if(!File.Exists(sbAppLocalePath))
                     throw new BuilderException("DFP0003", "Unable to locate SBAppLocale tool at " + sbAppLocalePath);
@@ -177,7 +177,8 @@ namespace SandcastleBuilder.PlugIns
 
                 builder.PresentationStyle.CopyHelpContent(HelpFileFormats.HtmlHelp1, String.Format(
                     CultureInfo.InvariantCulture, @"{0}Output\{1}", builder.WorkingFolder, HelpFileFormats.HtmlHelp1),
-                    builder.ReportProgress, (name, source, dest) => builder.TransformTemplate(name, source, dest));
+                    builder.ReportProgress, (name, source, dest) =>
+                        builder.SubsitutionTags.TransformTemplate(name, source, dest));
 
                 builder.ReportProgress("Adding DBCS Fix localization folder");
 

@@ -200,7 +200,7 @@ namespace SandcastleBuilder.PlugIns
 
                 foreach(ReferenceLinkSettings vs in otherLinks)
                     if(!String.IsNullOrEmpty(vs.ReflectionFilename))
-                        foreach(var n in builder.GetReferencedNamespaces(vs.ReflectionFilename, validNamespaces))
+                        foreach(var n in BuildProcess.GetReferencedNamespaces(vs.ReflectionFilename, validNamespaces))
                             rn.Add(n);
 
                 return;
@@ -297,7 +297,7 @@ namespace SandcastleBuilder.PlugIns
                         target.Attributes.Append(attr);
 
                         attr = configFile.CreateAttribute("groupId");
-                        attr.Value = builder.TransformText("Project_Ref_{@UniqueID}");
+                        attr.Value = builder.SubsitutionTags.TransformText("Project_Ref_{@UniqueID}");
                         target.Attributes.Append(attr);
 
                         // Keep the current project's stuff listed last so that it takes precedence
@@ -353,7 +353,7 @@ namespace SandcastleBuilder.PlugIns
                         target.Attributes.Append(attr);
 
                         attr = configFile.CreateAttribute("groupId");
-                        attr.Value = builder.TransformText("Project_{@UniqueID}");
+                        attr.Value = builder.SubsitutionTags.TransformText("Project_{@UniqueID}");
                         target.Attributes.Append(attr);
 
                         // Keep the current project's stuff listed last so that it takes precedence

@@ -163,7 +163,7 @@ namespace SandcastleBuilder.PlugIns
                 resolver.Attributes.Append(attr);
 
                 attr = config.CreateAttribute("assembly");
-                attr.Value = builder.TransformText(@"{@SHFBFolder}MRefBuilder.exe");
+                attr.Value = builder.SubsitutionTags.TransformText(@"{@SHFBFolder}MRefBuilder.exe");
                 resolver.Attributes.Append(attr);
 
                 attr = config.CreateAttribute("use-gac");

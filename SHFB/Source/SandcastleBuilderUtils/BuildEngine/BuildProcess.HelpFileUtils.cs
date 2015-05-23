@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.HelpFileUtils.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/09/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -40,10 +40,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml;
-using System.Xml.XPath;
-using System.Web;
 
 using Sandcastle.Core;
 
@@ -200,7 +197,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// </summary>
         private void MergeConceptualAndAdditionalContentTocInfo()
         {
-            FileItemCollection siteMapFiles;
             List<ITableOfContents> tocFiles;
             TocEntryCollection siteMap;
             TocEntry tocEntry;
@@ -220,12 +216,10 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 tocFiles.Add(topics);
 
             // Load all site maps and add them to the list
-            siteMapFiles = new FileItemCollection(project, BuildAction.SiteMap);
-
-            foreach(FileItem fileItem in siteMapFiles)
+            foreach(var contentFile in project.ContentFiles(BuildAction.SiteMap))
             {
-                this.ReportProgress("    Loading site map '{0}'", fileItem.FullPath);
-                siteMap = new TocEntryCollection(fileItem);
+                this.ReportProgress("    Loading site map '{0}'", contentFile.FullPath);
+                siteMap = new TocEntryCollection(contentFile);
                 siteMap.Load();
 
                 // Copy site map files to the help format folders
@@ -238,7 +232,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             // Sort the files
             tocFiles.Sort((x, y) =>
             {
-                FileItem fx = x.ContentLayoutFile, fy = y.ContentLayoutFile;
+                ContentFile fx = x.ContentLayoutFile, fy = y.ContentLayoutFile;
 
                 if(fx.SortOrder < fy.SortOrder)
                     return -1;
@@ -246,14 +240,14 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 if(fx.SortOrder > fy.SortOrder)
                     return 1;
 
-                return String.Compare(fx.Name, fy.Name, StringComparison.OrdinalIgnoreCase);
+                return String.Compare(fx.Filename, fy.Filename, StringComparison.OrdinalIgnoreCase);
             });
 
             // Create the merged TOC.  Invisible items are excluded.
             toc = new TocEntryCollection();
 
             foreach(ITableOfContents file in tocFiles)
-                file.GenerateTableOfContents(toc, project, false);
+                file.GenerateTableOfContents(toc, false);
 
             if(toc.Count != 0)
             {
@@ -543,7 +537,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     // EnsureOutputFoldersExist adds the folders to HelpFormatOutputFolders in the same order as
                     // the values so we can index it here.
                     presentationStyle.CopyHelpContent(value, this.HelpFormatOutputFolders[idx],
-                        this.ReportProgress, (name, source, dest) => this.TransformTemplate(name, source, dest));
+                        this.ReportProgress, (name, source, dest) => substitutionTags.TransformTemplate(name, source, dest));
                     idx++;
                 }
 
@@ -603,72 +597,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         //=====================================================================
 
         /// <summary>
-        /// This returns a complete list of files for inclusion in the compiled help file
-        /// </summary>
-        /// <param name="folder">The folder to expand</param>
-        /// <param name="format">The HTML help file format</param>
-        /// <returns>The full list of all files for the help project</returns>
-        /// <remarks>The help file list is expanded to ensure that we get all additional content including all
-        /// nested subfolders.  The <paramref name="format"/> parameter determines the format of the returned
-        /// file list.  For HTML Help 1, it returns a list of the filenames.  For MS Help 2, it returns the list
-        /// formatted with the necessary XML markup.</remarks>
-        private string HelpProjectFileList(string folder, HelpFileFormats format)
-        {
-            StringBuilder sb = new StringBuilder(10240);
-            string itemFormat, filename, checkName, sourceFolder = folder;
-            bool encode;
-
-            if(folder == null)
-                throw new ArgumentNullException("folder");
-
-            if(folder.Length != 0 && folder[folder.Length - 1] != '\\')
-                folder += @"\";
-
-            if((format & HelpFileFormats.HtmlHelp1) != 0)
-            {
-                if(folder.IndexOf(',') != -1 || folder.IndexOf(".h", StringComparison.OrdinalIgnoreCase) != -1)
-                    this.ReportWarning("BE0060", "The file path '{0}' contains a comma or '.h' which may " +
-                        "cause the Help 1 compiler to fail.", folder);
-
-                if(this.ResolvedHtmlHelpName.IndexOf(',') != -1 ||
-                  this.ResolvedHtmlHelpName.IndexOf(".h", StringComparison.OrdinalIgnoreCase) != -1)
-                    this.ReportWarning("BE0060", "The HtmlHelpName property value '{0}' contains a comma " +
-                        "or '.h' which may cause the Help 1 compiler to fail.", this.ResolvedHtmlHelpName);
-
-                itemFormat = "{0}\r\n";
-                encode = false;
-            }
-            else
-            {
-                itemFormat = "	<File Url=\"{0}\" />\r\n";
-                encode = true;
-            }
-
-            foreach(string name in Directory.EnumerateFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
-                if(!encode)
-                {
-                    filename = checkName = name.Replace(folder, String.Empty);
-
-                    if(checkName.EndsWith(".htm", StringComparison.OrdinalIgnoreCase) ||
-                      checkName.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
-                        checkName = checkName.Substring(0, checkName.LastIndexOf(".htm",
-                            StringComparison.OrdinalIgnoreCase));
-
-                    if(checkName.IndexOf(',') != -1 || checkName.IndexOf(".h",
-                      StringComparison.OrdinalIgnoreCase) != -1)
-                        this.ReportWarning("BE0060", "The filename '{0}' " +
-                            "contains a comma or '.h' which may cause the " +
-                            "Help 1 compiler to fail.", filename);
-
-                    sb.AppendFormat(itemFormat, filename);
-                }
-                else
-                    sb.AppendFormat(itemFormat, HttpUtility.HtmlEncode(name.Replace(folder, String.Empty)));
-
-            return sb.ToString();
-        }
-
-        /// <summary>
         /// This is used to generate the website helper files and copy the output to the project output folder
         /// ready for use as a website.
         /// </summary>
@@ -709,96 +637,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
             this.GatherBuildOutputFilenames();
             this.ExecutePlugIns(ExecutionBehaviors.After);
-        }
-
-        /// <summary>
-        /// This is called to generate the HTML table of contents when creating the website output
-        /// </summary>
-        /// <returns>The HTML to insert for the table of contents</returns>
-        private string GenerateHtmlToc()
-        {
-            XPathDocument tocDoc;
-            XPathNavigator navToc;
-            XPathNodeIterator entries;
-            Encoding enc = Encoding.Default;
-            StringBuilder sb = new StringBuilder(2048);
-
-            string content;
-
-            // When reading the file, use the default encoding but detect the encoding if byte order marks are
-            // present.
-            content = Utility.ReadWithEncoding(workingFolder + "WebTOC.xml", ref enc);
-
-            using(StringReader sr = new StringReader(content))
-            {
-                tocDoc = new XPathDocument(sr);
-            }
-
-            navToc = tocDoc.CreateNavigator();
-
-            // Get the TOC entries from the HelpTOC node
-            entries = navToc.Select("HelpTOC/*");
-
-            this.AppendTocEntry(entries, sb);
-
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// This is called to recursively append the child nodes to the HTML table of contents in the specified
-        /// string builder.
-        /// </summary>
-        /// <param name="entries">The list over which to iterate recursively.</param>
-        /// <param name="sb">The string builder to which the entries are appended.</param>
-        private void AppendTocEntry(XPathNodeIterator entries, StringBuilder sb)
-        {
-            string url, target, title;
-
-            foreach(XPathNavigator node in entries)
-                if(node.HasChildren)
-                {
-                    url = node.GetAttribute("Url", String.Empty);
-                    title = node.GetAttribute("Title", String.Empty);
-
-                    if(!String.IsNullOrEmpty(url))
-                        target = " target=\"TopicContent\"";
-                    else
-                    {
-                        url = "#";
-                        target = String.Empty;
-                    }
-
-                    sb.AppendFormat("<div class=\"TreeNode\">\r\n" +
-                        "<img class=\"TreeNodeImg\" " +
-                        "onclick=\"javascript: Toggle(this);\" " +
-                        "src=\"Collapsed.gif\"/><a class=\"UnselectedNode\" " +
-                        "onclick=\"javascript: return Expand(this);\" " +
-                        "href=\"{0}\"{1}>{2}</a>\r\n" +
-                        "<div class=\"Hidden\">\r\n", HttpUtility.HtmlEncode(url), target,
-                        HttpUtility.HtmlEncode(title));
-
-                    // Append child nodes
-                    this.AppendTocEntry(node.Select("*"), sb);
-
-                    // Write out the closing tags for the root node
-                    sb.Append("</div>\r\n</div>\r\n");
-                }
-                else
-                {
-                    title = node.GetAttribute("Title", String.Empty);
-                    url = node.GetAttribute("Url", String.Empty);
-
-                    if(String.IsNullOrEmpty(url))
-                        url = "about:blank";
-
-                    // Write out a TOC entry
-                    sb.AppendFormat("<div class=\"TreeItem\">\r\n" +
-                        "<img src=\"Item.gif\"/>" +
-                        "<a class=\"UnselectedNode\" " +
-                        "onclick=\"javascript: return SelectNode(this);\" " +
-                        "href=\"{0}\" target=\"TopicContent\">{1}</a>\r\n" +
-                        "</div>\r\n", HttpUtility.HtmlEncode(url), HttpUtility.HtmlEncode(title));
-                }
         }
 
         /// <summary>

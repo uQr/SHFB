@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : ContentFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/15/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -38,6 +38,14 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
         #region Properties
         //=====================================================================
+
+        /// <summary>
+        /// This read-only property is used to get the base path provider
+        /// </summary>
+        public IBasePathProvider BasePathProvider
+        {
+            get { return filePath.BasePathProvider; }
+        }
 
         /// <summary>
         /// This read-only property is used to get the content filename without the path
@@ -88,6 +96,12 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         /// <value>For other file types, this will always return zero</value>
         public int SortOrder { get; set; }
+
+        /// <summary>
+        /// This is used to get or set a provider that can be used to obtain content files from a project or some
+        /// other source.
+        /// </summary>
+        public IContentFileProvider ContentFileProvider { get; set; }
 
         #endregion
 

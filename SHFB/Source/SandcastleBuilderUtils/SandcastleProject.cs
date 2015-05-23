@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SandcastleProject.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/18/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -77,6 +77,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -98,7 +99,7 @@ namespace SandcastleBuilder.Utils
     /// <summary>
     /// This class represents all of the properties that make up a Sandcastle Help File Builder project
     /// </summary>
-    public sealed class SandcastleProject : IBasePathProvider, IDisposable
+    public sealed class SandcastleProject : IBasePathProvider, IContentFileProvider, IDisposable
     {
         #region Constants
         //=====================================================================
@@ -202,6 +203,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         /// <value>If true, final values (i.e. evaluated values used at build time) are being returned by the
         /// properties in this instance.</value>
+        [XmlIgnore]
         public bool UsingFinalValues { get; private set; }
 
         /// <summary>
@@ -380,22 +382,17 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This returns a collection of all build items in the project that represent folders and files
+        /// This returns an enumerable list of all build items in the project that represent folders and files
         /// </summary>
-        /// <remarks>This collection is generated each time the property is used.  As such, cache a copy if you
-        /// need to use it repeatedly.</remarks>
-        public Collection<FileItem> FileItems
+        public IEnumerable<FileItem> FileItems
         {
             get
             {
-                Collection<FileItem> fileItems = new Collection<FileItem>();
                 List<string> buildActions = new List<string>(Enum.GetNames(typeof(BuildAction)));
 
                 foreach(ProjectItem item in msBuildProject.AllEvaluatedItems)
                     if(buildActions.IndexOf(item.ItemType) != -1)
-                        fileItems.Add(new FileItem(this, item));
-
-                return fileItems;
+                        yield return new FileItem(this, item);
             }
         }
 
@@ -1488,14 +1485,42 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This method resolves any MSBuild environment variables in the
-        /// path objects.
+        /// This method resolves any MSBuild environment variables in the path objects
         /// </summary>
         /// <param name="path">The path to use</param>
         /// <returns>A copy of the path after performing any custom resolutions</returns>
         public string ResolvePath(string path)
         {
             return FilePath.reMSBuildVar.Replace(path, buildVarMatchEval);
+        }
+        #endregion
+
+        #region IContentFileProvider Members
+        //=====================================================================
+
+        /// <inheritdoc />
+        public IEnumerable<ContentFile> ContentFiles(BuildAction buildAction)
+        {
+            ContentFile contentFile;
+            string metadata;
+            int sortOrder;
+
+            foreach(ProjectItem item in msBuildProject.GetItems(buildAction.ToString()))
+            {
+                contentFile = new ContentFile(new FilePath(item.EvaluatedInclude, this)) { ContentFileProvider = this };
+
+                metadata = item.GetMetadataValue(BuildItemMetadata.LinkPath);
+
+                if(!String.IsNullOrWhiteSpace(metadata))
+                    contentFile.LinkPath = new FilePath(metadata, this);
+
+                metadata = item.GetMetadataValue(BuildItemMetadata.SortOrder);
+
+                if(!String.IsNullOrWhiteSpace(metadata) && Int32.TryParse(metadata, out sortOrder))
+                    contentFile.SortOrder = sortOrder;
+
+                yield return contentFile;
+            }
         }
         #endregion
 
@@ -1719,7 +1744,7 @@ namespace SandcastleBuilder.Utils
         {
             PropertyInfo[] propertyInfo;
 
-            propertyCache = new Dictionary<string, PropertyInfo>();
+            propertyCache = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
             pdcCache = TypeDescriptor.GetProperties(typeof(SandcastleProject));
 
             propertyInfo = typeof(SandcastleProject).GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -1907,21 +1932,7 @@ namespace SandcastleBuilder.Utils
 
             // Ignore unknown properties
             if(!propertyCache.TryGetValue(name, out property))
-            {
-                property = null;
-
-                // Could be mismatched by case, so try again the long way
-                foreach(string key in propertyCache.Keys)
-                    if(String.Compare(key, name, StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        name = key;
-                        property = propertyCache[name];
-                        break;
-                    }
-
-                if(property == null)
-                    return;
-            }
+                return;
 
             if(!property.CanWrite || property.IsDefined(typeof(XmlIgnoreAttribute), true))
                 throw new BuilderException("PRJ0004", String.Format(CultureInfo.CurrentCulture,
@@ -2339,32 +2350,39 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This returns an enumerable list of content files of the given type contained in the project
+        /// This is used by the replacement tag handler to get simple project property values that require no
+        /// other modification or simple ones that can be handled here.
         /// </summary>
-        /// <param name="buildAction">The build action of the items to retrieve</param>
-        /// <returns>An enumerable list of content files of the given type if any are found in the project</returns>
-        public IEnumerable<ContentFile> ContentFiles(BuildAction buildAction)
+        /// <param name="name">The property name for which to get the value</param>
+        /// <returns>The property value as a string if found or null if not found.  If the property name starts
+        /// with "HtmlEnc", the return value is HTML encoded.  Boolean values and those ending with "SdkLinkType"
+        /// are converted to lowercase for use in XML attribute values.</returns>
+        public string ReplacementValueFor(string name)
         {
-            ContentFile contentFile;
-            string metadata;
-            int sortOrder;
+            PropertyInfo property;
+            bool htmlEncode = false;
 
-            foreach(ProjectItem item in msBuildProject.GetItems(buildAction.ToString()))
+            if(name.StartsWith("HtmlEnc", StringComparison.OrdinalIgnoreCase))
             {
-                contentFile = new ContentFile(new FilePath(item.EvaluatedInclude, this));
-
-                metadata = item.GetMetadataValue(BuildItemMetadata.LinkPath);
-
-                if(!String.IsNullOrWhiteSpace(metadata))
-                    contentFile.LinkPath = new FilePath(metadata, this);
-
-                metadata = item.GetMetadataValue(BuildItemMetadata.SortOrder);
-
-                if(!String.IsNullOrWhiteSpace(metadata) && Int32.TryParse(metadata, out sortOrder))
-                    contentFile.SortOrder = sortOrder;
-
-                yield return contentFile;
+                htmlEncode = true;
+                name = name.Substring(7);
             }
+
+            if(String.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException("name");
+
+            if(!propertyCache.TryGetValue(name, out property))
+                return null;
+
+            object value = property.GetValue(this);
+
+            if(value is Boolean || name.EndsWith("SdkLinkType", StringComparison.OrdinalIgnoreCase))
+                return value.ToString().ToLowerInvariant();
+
+            if(htmlEncode)
+                return WebUtility.HtmlEncode(value.ToString());
+
+            return value.ToString();
         }
         #endregion
     }

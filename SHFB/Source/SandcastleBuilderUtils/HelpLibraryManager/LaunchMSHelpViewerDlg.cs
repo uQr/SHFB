@@ -361,7 +361,7 @@ namespace SandcastleBuilder.MicrosoftHelpViewer
                 try
                 {
                     var bp = new SandcastleBuilder.Utils.BuildEngine.BuildProcess(project);
-                    helpFilePath = bp.TransformText(helpFilePath);
+                    helpFilePath = bp.SubsitutionTags.TransformText(helpFilePath);
                     setupFile = Path.ChangeExtension(helpFilePath, ".msha");
                 }
                 catch

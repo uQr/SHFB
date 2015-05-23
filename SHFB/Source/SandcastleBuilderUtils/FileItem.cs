@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : FileItem.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/11/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -32,6 +32,7 @@ using System.Text.RegularExpressions;
 
 using Microsoft.Build.Evaluation;
 
+using SandcastleBuilder.Utils.ConceptualContent;
 using SandcastleBuilder.Utils.Design;
 
 namespace SandcastleBuilder.Utils
@@ -379,7 +380,7 @@ namespace SandcastleBuilder.Utils
         }
         #endregion
 
-        #region Refresh path properties
+        #region Helper methods
         //=====================================================================
 
         /// <summary>
@@ -391,6 +392,20 @@ namespace SandcastleBuilder.Utils
 
             if(this.HasMetadata(BuildItemMetadata.LinkPath))
                 this.LinkPath = new FilePath(this.GetMetadata(BuildItemMetadata.LinkPath), this.Project);
+        }
+
+        /// <summary>
+        /// This is used to convert the file item to a <see cref="ContentFile"/> instance
+        /// </summary>
+        /// <returns>The file item as a <see cref="ContentFile"/></returns>
+        public ContentFile ToContentFile()
+        {
+            return new ContentFile(includePath)
+            {
+                LinkPath = linkPath,
+                SortOrder = sortOrder,
+                ContentFileProvider = this.Project
+            };
         }
         #endregion
 

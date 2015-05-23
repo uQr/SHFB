@@ -259,6 +259,22 @@ namespace SandcastleBuilder.Utils.BuildEngine
         }
 
         /// <summary>
+        /// This read-only property returns the language used for resource items, etc.
+        /// </summary>
+        public CultureInfo Language
+        {
+            get { return language; }
+        }
+
+        /// <summary>
+        /// This read-only property returns the resource item file language folder name
+        /// </summary>
+        public string LanguageFolder
+        {
+            get { return languageFolder; }
+        }
+
+        /// <summary>
         /// This returns the presentation instance being used by the build process
         /// </summary>
         public PresentationStyleSettings PresentationStyle
@@ -501,7 +517,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// </summary>
         public string ResolvedHelpTitle
         {
-            get { return this.TransformText(project.HelpTitle); }
+            get { return substitutionTags.TransformText(project.HelpTitle); }
         }
 
         /// <summary>
@@ -510,7 +526,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// </summary>
         public string ResolvedHtmlHelpName
         {
-            get { return this.TransformText(project.HtmlHelpName); }
+            get { return substitutionTags.TransformText(project.HtmlHelpName); }
         }
 
         /// <summary>
@@ -527,6 +543,22 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 return referencedNamespaces;
             }
+        }
+
+        /// <summary>
+        /// This read-only property returns the MEF component container
+        /// </summary>
+        internal CompositionContainer ComponentContainer
+        {
+            get { return componentContainer; }
+        }
+
+        /// <summary>
+        /// This read-only property returns the syntax generator metadata
+        /// </summary>
+        internal IEnumerable<ISyntaxGeneratorMetadata> SyntaxGenerators
+        {
+            get { return syntaxGenerators; }
         }
         #endregion
 
@@ -549,7 +581,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
             apiTocOrder = -1;
             apiTocParentId = rootContentContainerId = String.Empty;
 
-            fieldMatchEval = new MatchEvaluator(OnFieldMatch);
             excludeElementEval = new MatchEvaluator(OnExcludeElement);
 
             help1Files = new Collection<string>();
@@ -882,7 +913,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 {
                     this.ExecutePlugIns(ExecutionBehaviors.Before);
 
-                    this.TransformTemplate(Path.GetFileName(languageFile), Path.GetDirectoryName(languageFile),
+                    substitutionTags.TransformTemplate(Path.GetFileName(languageFile), Path.GetDirectoryName(languageFile),
                         workingFolder);
                     File.Move(workingFolder + Path.GetFileName(languageFile), workingFolder + "SHFBContent.xml");
 
@@ -905,8 +936,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                 {
-                    this.TransformTemplate("MRefBuilder.config", templateFolder, workingFolder);
-                    scriptFile = this.TransformTemplate("GenerateRefInfo.proj", templateFolder, workingFolder);
+                    substitutionTags.TransformTemplate("MRefBuilder.config", templateFolder, workingFolder);
+                    scriptFile = substitutionTags.TransformTemplate("GenerateRefInfo.proj", templateFolder, workingFolder);
 
                     try
                     {
@@ -980,7 +1011,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                 {
-                    scriptFile = this.TransformTemplate("TransformManifest.proj", templateFolder, workingFolder);
+                    scriptFile = substitutionTags.TransformTemplate("TransformManifest.proj", templateFolder, workingFolder);
 
                     this.ExecutePlugIns(ExecutionBehaviors.Before);
                     this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:n TransformManifest.proj");
@@ -1028,8 +1059,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        this.TransformTemplate("GenerateInheritedDocs.config", templateFolder, workingFolder);
-                        scriptFile = this.TransformTemplate("GenerateInheritedDocs.proj", templateFolder, workingFolder);
+                        substitutionTags.TransformTemplate("GenerateInheritedDocs.config", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("GenerateInheritedDocs.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m GenerateInheritedDocs.proj");
@@ -1084,7 +1116,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                 {
-                    scriptFile = this.TransformTemplate("GenerateIntermediateTOC.proj", templateFolder, workingFolder);
+                    scriptFile = substitutionTags.TransformTemplate("GenerateIntermediateTOC.proj", templateFolder,
+                        workingFolder);
 
                     this.ExecutePlugIns(ExecutionBehaviors.Before);
 
@@ -1138,7 +1171,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 // Get namespaces referenced in the reflection data (plug-ins are responsible for adding
                 // additional namespaces if they add other reflection data files).
-                foreach(string n in this.GetReferencedNamespaces(reflectionFile, validNamespaces))
+                foreach(string n in GetReferencedNamespaces(reflectionFile, validNamespaces))
                     rn.Add(n);
 
                 // Get namespaces from the Framework comments files of the referenced namespaces.  This adds
@@ -1168,7 +1201,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     // The configuration varies based on the style.  We'll use a common name (sandcastle.config).
                     resolvedPath = presentationStyle.ResolvePath(presentationStyle.ReferenceBuildConfiguration);
-                    this.TransformTemplate(Path.GetFileName(resolvedPath), Path.GetDirectoryName(resolvedPath),
+                    substitutionTags.TransformTemplate(Path.GetFileName(resolvedPath), Path.GetDirectoryName(resolvedPath),
                         workingFolder);
 
                     if(!Path.GetFileName(resolvedPath).Equals("sandcastle.config", StringComparison.OrdinalIgnoreCase))
@@ -1181,7 +1214,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                         resolvedPath = presentationStyle.ResolvePath(presentationStyle.ConceptualBuildConfiguration);
 
-                        this.TransformTemplate(Path.GetFileName(resolvedPath), Path.GetDirectoryName(resolvedPath),
+                        substitutionTags.TransformTemplate(Path.GetFileName(resolvedPath), Path.GetDirectoryName(resolvedPath),
                             workingFolder);
 
                         if(!Path.GetFileName(resolvedPath).Equals("conceptual.config", StringComparison.OrdinalIgnoreCase))
@@ -1207,7 +1240,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        scriptFile = this.TransformTemplate("BuildConceptualTopics.proj", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("BuildConceptualTopics.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:n BuildConceptualTopics.proj");
@@ -1220,7 +1254,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                 if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                 {
-                    scriptFile = this.TransformTemplate("BuildReferenceTopics.proj", templateFolder, workingFolder);
+                    scriptFile = substitutionTags.TransformTemplate("BuildReferenceTopics.proj", templateFolder,
+                        workingFolder);
 
                     this.ExecutePlugIns(ExecutionBehaviors.Before);
                     this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:n BuildReferenceTopics.proj");
@@ -1283,7 +1318,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        scriptFile = this.TransformTemplate("ExtractHtmlInfo.proj", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("ExtractHtmlInfo.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m ExtractHtmlInfo.proj");
@@ -1333,7 +1369,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
-                        this.TransformTemplate("Help1x.hhp", templateFolder, workingFolder);
+                        substitutionTags.TransformTemplate("Help1x.hhp", templateFolder, workingFolder);
                         this.ExecutePlugIns(ExecutionBehaviors.After);
                     }
 
@@ -1342,7 +1378,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        scriptFile = this.TransformTemplate("Build1xHelpFile.proj", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("Build1xHelpFile.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m Build1xHelpFile.proj");
@@ -1392,25 +1429,28 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        this.TransformTemplate("HelpContentSetup.msha", templateFolder, workingFolder);
+                        substitutionTags.TransformTemplate("HelpContentSetup.msha", templateFolder, workingFolder);
 
                         // Rename the content setup file to use the help filename to keep them related and
                         // so that multiple output files can be sent to the same output folder.
                         File.Move(workingFolder + "HelpContentSetup.msha", workingFolder + this.ResolvedHtmlHelpName + ".msha");
 
                         // Generate the example install and remove scripts
-                        this.TransformTemplate("InstallMSHC.bat", templateFolder, workingFolder);
-                        File.Move(workingFolder + "InstallMSHC.bat", workingFolder + "Install_" + this.ResolvedHtmlHelpName + ".bat");
+                        substitutionTags.TransformTemplate("InstallMSHC.bat", templateFolder, workingFolder);
+                        File.Move(workingFolder + "InstallMSHC.bat", workingFolder + "Install_" +
+                            this.ResolvedHtmlHelpName + ".bat");
 
-                        this.TransformTemplate("RemoveMSHC.bat", templateFolder, workingFolder);
-                        File.Move(workingFolder + "RemoveMSHC.bat", workingFolder + "Remove_" + this.ResolvedHtmlHelpName + ".bat");
+                        substitutionTags.TransformTemplate("RemoveMSHC.bat", templateFolder, workingFolder);
+                        File.Move(workingFolder + "RemoveMSHC.bat", workingFolder + "Remove_" +
+                            this.ResolvedHtmlHelpName + ".bat");
 
                         // Copy the launcher utility
                         File.Copy(ComponentUtilities.ToolsFolder + "HelpLibraryManagerLauncher.exe",
                             workingFolder + "HelpLibraryManagerLauncher.exe");
                         File.SetAttributes(workingFolder + "HelpLibraryManagerLauncher.exe", FileAttributes.Normal);
 
-                        scriptFile = this.TransformTemplate("BuildHelpViewerFile.proj", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("BuildHelpViewerFile.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m BuildHelpViewerFile.proj");
@@ -1480,7 +1520,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        scriptFile = this.TransformTemplate("BuildOpenXmlFile.proj", templateFolder, workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("BuildOpenXmlFile.proj", templateFolder,
+                            workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m BuildOpenXmlFile.proj");
@@ -1527,8 +1568,8 @@ namespace SandcastleBuilder.Utils.BuildEngine
 
                     if(!this.ExecutePlugIns(ExecutionBehaviors.InsteadOf))
                     {
-                        scriptFile = this.TransformTemplate("GenerateMarkdownContent.proj", templateFolder,
-                            workingFolder);
+                        scriptFile = substitutionTags.TransformTemplate("GenerateMarkdownContent.proj",
+                            templateFolder, workingFolder);
 
                         this.ExecutePlugIns(ExecutionBehaviors.Before);
                         this.RunProcess(msBuildExePath, "/nologo /clp:NoSummary /v:m GenerateMarkdownContent.proj");

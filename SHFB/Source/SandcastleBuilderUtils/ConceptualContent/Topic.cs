@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : Topic.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/16/2015
+// Updated : 05/17/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -13,13 +13,13 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.6.0.7  04/24/2008  EFW  Created the code
-// 1.8.0.0  08/07/2008  EFW  Modified for use with the new project format
-// 1.9.0.0  06/06/2010  EFW  Added support for MS Help Viewer output
-// 1.9.0.0  07/01/2010  EFW  Added support for API parent mode setting
-// 1.9.3.3  12/15/2011  EFW  Updated for use with the new content layout editor
+// 04/24/2008  EFW  Created the code
+// 08/07/2008  EFW  Modified for use with the new project format
+// 06/06/2010  EFW  Added support for MS Help Viewer output
+// 07/01/2010  EFW  Added support for API parent mode setting
+// 12/15/2011  EFW  Updated for use with the new content layout editor
 //===============================================================================================================
 
 using System;
@@ -37,7 +37,7 @@ using SandcastleBuilder.Utils.BuildEngine;
 namespace SandcastleBuilder.Utils.ConceptualContent
 {
     /// <summary>
-    /// This represents a conceptual content topic.
+    /// This represents a conceptual content topic
     /// </summary>
     public class Topic : INotifyPropertyChanged
     {
@@ -152,7 +152,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     return "(Not found)";
                 }
 
-                return topicFile.FileItem.IncludePath.PersistablePath;
+                return topicFile.ContentFile.PersistablePath;
             }
         }
 
@@ -719,7 +719,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 // Write out the help file version project property value
                 writer.WriteStartElement("item");
                 writer.WriteAttributeString("id", "PBM_FileVersion");
-                writer.WriteValue(builder.TransformText(builder.CurrentProject.HelpFileVersion));
+                writer.WriteValue(builder.SubsitutionTags.TransformText(builder.CurrentProject.HelpFileVersion));
                 writer.WriteEndElement();
 
                 // If no title is specified, use the display title
@@ -743,7 +743,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("name", attr.AttributeName);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.TransformText(attr.AttributeValue));
+                    writer.WriteValue(builder.SubsitutionTags.TransformText(attr.AttributeValue));
 
                     writer.WriteEndElement();
                 }
@@ -755,7 +755,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("name", attr.AttributeName);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.TransformText(attr.AttributeValue));
+                    writer.WriteValue(builder.SubsitutionTags.TransformText(attr.AttributeValue));
 
                     writer.WriteEndElement();
                 }
@@ -767,7 +767,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("index", kw.Index);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.TransformText(kw.Term));
+                    writer.WriteValue(builder.SubsitutionTags.TransformText(kw.Term));
 
                     writer.WriteEndElement();
                 }

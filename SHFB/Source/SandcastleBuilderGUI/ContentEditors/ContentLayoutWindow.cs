@@ -170,7 +170,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
             // Add the topic to the editor's collection
             newTopic = new Topic
             {
-                TopicFile = new TopicFile(newItem)
+                TopicFile = new TopicFile(newItem.ToContentFile())
             };
 
             if(addAsChild && currentTopic != null)
@@ -356,7 +356,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                         // Add the file to the project if not already there
                         newItem = contentLayoutFile.Project.AddFileToProject(dlg.FileName, newPath);
 
-                        t.TopicFile = new TopicFile(newItem);
+                        t.TopicFile = new TopicFile(newItem.ToContentFile());
 
                         // Let the caller know we associated a file with the topic
                         e.Handled = true;

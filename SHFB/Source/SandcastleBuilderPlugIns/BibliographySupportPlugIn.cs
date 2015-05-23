@@ -133,7 +133,7 @@ namespace SandcastleBuilder.PlugIns
 
             // If relative, the path is relative to the project folder
             bibliographyFile = FilePath.RelativeToAbsolutePath(builder.ProjectFolder,
-                builder.TransformText(bibliographyFile));
+                builder.SubsitutionTags.TransformText(bibliographyFile));
 
             if(!File.Exists(bibliographyFile))
                 throw new BuilderException("BIP0003", "Unable to locate bibliography file at " + bibliographyFile);

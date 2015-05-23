@@ -347,7 +347,7 @@ namespace SandcastleBuilder.PlugIns
                         new XAttribute("href", Path.GetFileName(builder.DefaultTopicFile)),
                         new XAttribute("title", builder.ResolvedHelpTitle),
                         new XAttribute("tocid", "roottoc"),
-                        new XText(builder.TransformText(builder.CurrentProject.HelpTitle))));
+                        new XText(builder.SubsitutionTags.TransformText(builder.CurrentProject.HelpTitle))));
 
             if(expanded)
                 result.SetAttributeValue("data-childrenloaded", "true");

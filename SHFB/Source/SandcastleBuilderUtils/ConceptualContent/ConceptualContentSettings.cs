@@ -43,7 +43,8 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
         private List<ImageReference> imageFiles;
         private List<ContentFile> codeSnippetFiles, tokenFiles, contentLayoutFiles;
-        private Collection<TopicCollection> topics;
+        private List<TopicCollection> topics;
+
         #endregion
 
         #region Properties
@@ -85,7 +86,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// This is used to get a collection of the conceptual content topics
         /// </summary>
         /// <remarks>Each item in the collection represents one content layout file from the project</remarks>
-        public Collection<TopicCollection> Topics
+        public IList<TopicCollection> Topics
         {
             get { return topics; }
         }
@@ -104,12 +105,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             codeSnippetFiles = project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath).ToList();
             tokenFiles = project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath).ToList();
             contentLayoutFiles = project.ContentFiles(BuildAction.ContentLayout).ToList();
-            topics = new Collection<TopicCollection>();
-
-            var clf = new FileItemCollection(project, BuildAction.ContentLayout);
-
-            foreach(FileItem file in clf)
-                topics.Add(new TopicCollection(file));
+            topics = project.ContentFiles(BuildAction.ContentLayout).Select(file => new TopicCollection(file)).ToList();
         }
         #endregion
 
@@ -133,7 +129,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             bool missingFile = false;
 
             builder.ReportProgress("Copying standard token shared content file...");
-            builder.TransformTemplate("HelpFileBuilderTokens.tokens", builder.TemplateFolder,
+            builder.SubsitutionTags.TransformTemplate("HelpFileBuilderTokens.tokens", builder.TemplateFolder,
                 builder.WorkingFolder);
 
             builder.ReportProgress("Checking for other token files...");
@@ -148,7 +144,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 {
                     builder.ReportProgress("    {0} -> {1}", tokenFile.FullPath,
                         Path.Combine(builder.WorkingFolder, Path.GetFileName(tokenFile.FullPath)));
-                    builder.TransformTemplate(Path.GetFileName(tokenFile.FullPath),
+                    builder.SubsitutionTags.TransformTemplate(Path.GetFileName(tokenFile.FullPath),
                         Path.GetDirectoryName(tokenFile.FullPath), builder.WorkingFolder);
                 }
 
@@ -293,29 +289,6 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             this.CreateCompanionFiles(builder);
             this.CreateContentMetadata(builder);
             this.CreateConceptualManifest(builder);
-        }
-
-        // TODO: This can eventually go away as the collections will be exposed as IList<T> properties.
-        // TopicCollection needs some work first since the topics use FileItem instances.
-        /// <summary>
-        /// This method can be used by plug-ins to merge content from another Sandcastle Help File Builder
-        /// project file.
-        /// </summary>
-        /// <param name="project">The project file from which to merge content</param>
-        /// <remarks>Auto-generated content can be added to a temporary SHFB project and then added to the
-        /// current project's content at build time using this method.  Such content cannot always be added to
-        /// the project being built as it may alter the underlying MSBuild project which is not wanted.</remarks>
-        public void MergeContentFrom(SandcastleProject project)
-        {
-            imageFiles.AddRange(project.ImagesReferences);
-            codeSnippetFiles.AddRange(project.ContentFiles(BuildAction.CodeSnippets).OrderBy(f => f.LinkPath));
-            tokenFiles.AddRange(project.ContentFiles(BuildAction.Tokens).OrderBy(f => f.LinkPath));
-            contentLayoutFiles.AddRange(project.ContentFiles(BuildAction.ContentLayout));
-
-            var clf = new FileItemCollection(project, BuildAction.ContentLayout);
-
-            foreach(FileItem file in clf)
-                topics.Add(new TopicCollection(file));
         }
 
         /// <summary>

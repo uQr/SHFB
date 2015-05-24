@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : AjaxDocPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/04/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -14,13 +14,13 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.5.2.0  09/09/2007  EFW  Created the code
-// 1.6.0.1  10/19/2007  EFW  Added execution behavior for ValidateAssemblies
-// 1.6.0.6  03/10/2008  EFW  Added support for the API filter
-// 1.8.0.0  08/12/2008  EFW  Modified to support the new project format
-// -------  12/17/2013  EFW  Updated to use MEF for the plug-ins
+// 09/09/2007  EFW  Created the code
+// 10/19/2007  EFW  Added execution behavior for ValidateAssemblies
+// 03/10/2008  EFW  Added support for the API filter
+// 08/12/2008  EFW  Modified to support the new project format
+// 12/17/2013  EFW  Updated to use MEF for the plug-ins
 //===============================================================================================================
 
 using System;
@@ -184,32 +184,30 @@ namespace SandcastleBuilder.PlugIns
             {
                 builder.ExecuteBeforeStepPlugIns();
 
-                foreach(DocumentationSource ds in builder.CurrentProject.DocumentationSources)
-                    foreach(string commentsName in DocumentationSource.CommentsFiles(ds.SourceFile,
-                      ds.IncludeSubFolders))
+                foreach(string commentsName in builder.CurrentProject.DocumentationSources.SelectMany(ds => ds.CommentsFiles))
+                {
+                    workingPath = builder.WorkingFolder + Path.GetFileName(commentsName);
+
+                    // Warn if there is a duplicate and copy the comments file to a unique name to preserve
+                    // its content.
+                    if(File.Exists(workingPath))
                     {
-                        workingPath = builder.WorkingFolder + Path.GetFileName(commentsName);
+                        workingPath = builder.WorkingFolder + Guid.NewGuid().ToString("B");
 
-                        // Warn if there is a duplicate and copy the comments file to a unique name to preserve
-                        // its content.
-                        if(File.Exists(workingPath))
-                        {
-                            workingPath = builder.WorkingFolder + Guid.NewGuid().ToString("B");
-
-                            builder.ReportWarning("BE0063", "'{0}' matches a previously copied comments " +
-                                "filename.  The duplicate will be copied to a unique name to preserve the " +
-                                "comments it contains.", commentsName);
-                        }
-
-                        File.Copy(commentsName, workingPath, true);
-                        File.SetAttributes(workingPath, FileAttributes.Normal);
-
-                        // Add the file to the XML comments file collection
-                        comments = new XmlCommentsFile(workingPath);
-
-                        builder.CommentsFiles.Add(comments);
-                        builder.ReportProgress("    {0} -> {1}", commentsName, workingPath);
+                        builder.ReportWarning("BE0063", "'{0}' matches a previously copied comments " +
+                            "filename.  The duplicate will be copied to a unique name to preserve the " +
+                            "comments it contains.", commentsName);
                     }
+
+                    File.Copy(commentsName, workingPath, true);
+                    File.SetAttributes(workingPath, FileAttributes.Normal);
+
+                    // Add the file to the XML comments file collection
+                    comments = new XmlCommentsFile(workingPath);
+
+                    builder.CommentsFiles.Add(comments);
+                    builder.ReportProgress("    {0} -> {1}", commentsName, workingPath);
+                }
 
                 builder.ExecuteAfterStepPlugIns();
                 return;

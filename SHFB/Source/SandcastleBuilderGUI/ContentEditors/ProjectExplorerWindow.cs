@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : ProjectExplorerWindow.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -78,6 +78,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
         private SandcastleProject currentProject;
         private FileTree fileTree;
+        private DocumentationSourceCollection docSources;
         private ReferenceItemCollection projectReferences;
 
         // This is used to search for a few common binary characters in the range \x00 to \x1F which should be
@@ -373,6 +374,20 @@ namespace SandcastleBuilder.Gui.ContentEditors
         //=====================================================================
 
         /// <summary>
+        /// This is used to notify the project of changes to the documentation source collection
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void docSources_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            if(currentProject != null)
+            {
+                docSources.SaveToProject();
+                currentProject.MarkAsDirty();
+            }
+        }
+
+        /// <summary>
         /// Add item templates to the New Item menu
         /// </summary>
         private void AddItemTemplates()
@@ -523,6 +538,13 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 root.ImageIndex = root.SelectedImageIndex = (int)NodeIcon.DocSourceFolder;
 
                 tvProjectFiles.Nodes[0].Nodes.Add(root);
+
+                if(docSources != null)
+                    docSources.ListChanged -= docSources_ListChanged;
+
+                // Cast it back to the collection so that we can use it for editing
+                docSources = (DocumentationSourceCollection)currentProject.DocumentationSources;
+                docSources.ListChanged += docSources_ListChanged;
             }
             else
             {
@@ -536,7 +558,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
             {
                 root.Nodes.Clear();
 
-                foreach(DocumentationSource ds in currentProject.DocumentationSources)
+                foreach(DocumentationSource ds in docSources.OrderBy(ds => ds.SourceDescription))
                 {
                     source = new TreeNode(ds.SourceDescription);
                     source.Name = ds.SourceFile;
@@ -950,7 +972,6 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     fileTree.RefreshPathsInChildren(e.Node);
 
                 currentProject.MSBuildProject.ReevaluateIfNecessary();
-                currentProject.MarkAsDirty();
 
                 pgProps.Refresh();
             }
@@ -983,8 +1004,10 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void miAddDocSource_Click(object sender, EventArgs e)
         {
-            DocumentationSourceCollection docSources = currentProject.DocumentationSources;
             string ext, otherFile;
+
+            if(docSources == null)
+                return;
 
             using(OpenFileDialog dlg = new OpenFileDialog())
             {
@@ -1054,7 +1077,6 @@ namespace SandcastleBuilder.Gui.ContentEditors
                                 }
                         }
 
-                        docSources.Sort();
                         tvProjectFiles.SelectedNode = this.LoadDocSources(false);
                         tvProjectFiles.SelectedNode.Expand();
                     }
@@ -1075,15 +1097,12 @@ namespace SandcastleBuilder.Gui.ContentEditors
             NodeData nodeData = (NodeData)tvProjectFiles.SelectedNode.Tag;
             DocumentationSource ds = (DocumentationSource)nodeData.Item;
 
-            if(MessageBox.Show("Are you sure you want to remove '" +
-              ds.SourceDescription + "' from the project?", Constants.AppName,
-              MessageBoxButtons.YesNo, MessageBoxIcon.Question) ==
-              DialogResult.Yes)
+            if(MessageBox.Show("Are you sure you want to remove '" + ds.SourceDescription + "' from the project?",
+              Constants.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                currentProject.DocumentationSources.Remove(ds);
+                docSources.Remove(ds);
                 tvProjectFiles.SelectedNode = this.LoadDocSources(false);
-                tvProjectFiles_AfterSelect(tvProjectFiles,
-                    new TreeViewEventArgs(tvProjectFiles.SelectedNode));
+                tvProjectFiles_AfterSelect(tvProjectFiles, new TreeViewEventArgs(tvProjectFiles.SelectedNode));
             }
         }
         #endregion
@@ -2085,7 +2104,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
             dropFiles = (Array)e.Data.GetData(DataFormats.FileDrop);
 
-            if(dropFiles == null)
+            if(dropFiles == null || docSources == null)
                 return;
 
             // The target node should be selected from the DragOver event.  If not, assume we are dropping files
@@ -2127,12 +2146,12 @@ namespace SandcastleBuilder.Gui.ContentEditors
                         if(ext == ".sln")
                         {
                             foreach(string project in SelectProjectsDlg.SelectSolutionOrProjects(file))
-                                currentProject.DocumentationSources.Add(project, null, null, false);
+                                docSources.Add(project, null, null, false);
 
                             continue;
                         }
 
-                        currentProject.DocumentationSources.Add(file, null, null, false);
+                        docSources.Add(file, null, null, false);
 
                         // If there's a match for a comments file or an assembly, add it too.
                         if(ext == ".xml")
@@ -2140,19 +2159,19 @@ namespace SandcastleBuilder.Gui.ContentEditors
                             otherFile = Path.ChangeExtension(file, ".dll");
 
                             if(File.Exists(otherFile))
-                                currentProject.DocumentationSources.Add(otherFile, null, null, false);
+                                docSources.Add(otherFile, null, null, false);
                             else
                             {
                                 otherFile = Path.ChangeExtension(file, ".exe");
 
                                 if(File.Exists(otherFile))
-                                    currentProject.DocumentationSources.Add(otherFile, null, null, false);
+                                    docSources.Add(otherFile, null, null, false);
                                 else
                                 {
                                     otherFile = Path.ChangeExtension(file, ".winmd");
 
                                     if(File.Exists(otherFile))
-                                        currentProject.DocumentationSources.Add(otherFile, null, null, false);
+                                        docSources.Add(otherFile, null, null, false);
                                 }
                             }
                         }
@@ -2162,7 +2181,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                                 otherFile = Path.ChangeExtension(file, ".xml");
 
                                 if(File.Exists(otherFile))
-                                    currentProject.DocumentationSources.Add(otherFile, null, null, false);
+                                    docSources.Add(otherFile, null, null, false);
                             }
 
                         continue;
@@ -2196,8 +2215,6 @@ namespace SandcastleBuilder.Gui.ContentEditors
             {
                 Cursor.Current = Cursors.Default;
             }
-
-            currentProject.DocumentationSources.Sort();
 
             // Rather than trying to synch the tree with the new nodes, we'll just reload the whole thing
             this.LoadProject();

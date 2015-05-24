@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SandcastleProject.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/18/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -72,7 +72,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -143,7 +142,7 @@ namespace SandcastleBuilder.Utils
         // Local property info cache
         private static Dictionary<string, PropertyInfo> propertyCache = InitializePropertyCache();
         private static PropertyDescriptorCollection pdcCache;
-        private bool loadingProperties, isDirty;
+        private bool isDirty;
 
         // Path and build-related properties
         private FolderPath hhcPath, workingPath, componentPath;
@@ -318,45 +317,6 @@ namespace SandcastleBuilder.Utils
             get { return isDirty || msBuildProject.Xml.HasUnsavedChanges; }
         }
 
-        // TODO: Remove this in favor of IEnumerable<DocumentationSource>?  Standalone GUI would need a way to
-        // get a collection and be able to detect changes in it.  Could also perhaps remove
-        // DocumentationSourceCollection or move it to the GUI project.
-        /// <summary>
-        /// Returns the list of documentation sources to use in building the help file
-        /// </summary>
-        public DocumentationSourceCollection DocumentationSources
-        {
-            get
-            {
-                if(docSources == null)
-                {
-                    try
-                    {
-                        loadingProperties = true;
-
-                        docSources = new DocumentationSourceCollection(this);
-                        docSources.ListChanged += docSources_ListChanged;
-
-                        var docSourcesProperty = msBuildProject.GetProperty("DocumentationSources");
-
-                        if(docSourcesProperty != null && !String.IsNullOrWhiteSpace(docSourcesProperty.UnevaluatedValue))
-                        {
-                            // The paths in the elements may contain variable references so use final values if
-                            // requested.
-                            docSources.FromXml(this.UsingFinalValues ? docSourcesProperty.EvaluatedValue :
-                                docSourcesProperty.UnevaluatedValue);
-                        }
-                    }
-                    finally
-                    {
-                        loadingProperties = false;
-                    }
-                }
-
-                return docSources;
-            }
-        }
-
         /// <summary>
         /// This read-only property is used to get the build log file location
         /// </summary>
@@ -378,6 +338,21 @@ namespace SandcastleBuilder.Utils
                     path = Path.Combine(Path.GetDirectoryName(msBuildProject.FullPath), outputPath);
 
                 return Path.GetFullPath(path + "LastBuild.log");
+            }
+        }
+
+        /// <summary>
+        /// This read-only property returns an enumerable list of documentation sources to use in building the
+        /// help file.
+        /// </summary>
+        public IEnumerable<DocumentationSource> DocumentationSources
+        {
+            get
+            {
+                if(docSources == null)
+                    docSources = new DocumentationSourceCollection(this);
+
+                return docSources;
             }
         }
 
@@ -452,6 +427,28 @@ namespace SandcastleBuilder.Utils
                     foreach(var arg in XElement.Load(xr, LoadOptions.PreserveWhitespace).Descendants("Argument"))
                         yield return new TransformComponentArgument(arg);
                 }
+            }
+        }
+
+        /// <summary>
+        /// This read-only property returns an enumerable list of all user-defined properties
+        /// </summary>
+        /// <returns>An enumerable list of all properties determined not to be help file builder project
+        /// properties, MSBuild build engine related properties, or environment variables.</returns>
+        public IEnumerable<ProjectProperty> UserDefinedProperties
+        {
+            get
+            {
+                if(msBuildProject != null && propertyCache != null)
+                    foreach(ProjectProperty prop in msBuildProject.AllEvaluatedProperties)
+                    {
+                        if(!prop.IsEnvironmentProperty && !prop.IsGlobalProperty && !prop.IsImported &&
+                          !prop.IsReservedProperty && !propertyCache.ContainsKey(prop.Name) &&
+                          restrictedProps.IndexOf(prop.Name) == -1)
+                        {
+                            yield return prop;
+                        }
+                    }
             }
         }
         #endregion
@@ -1678,8 +1675,6 @@ namespace SandcastleBuilder.Utils
         {
             string newName = Guid.NewGuid().ToString();
 
-            cloneProject.EnsureProjectIsCurrent(false);
-            
             this.UsingFinalValues = true;
 
             using(StringReader sr = new StringReader(cloneProject.msBuildProject.Xml.RawXml))
@@ -1756,17 +1751,6 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This is handled to mark the project as dirty when the documentation source collection is modified
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event parameters</param>
-        private void docSources_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            if(!loadingProperties)
-                this.MarkAsDirty();
-        }
-
-        /// <summary>
         /// Replace a \xNN value in the copyright text with its actual character
         /// </summary>
         /// <param name="match">The match that was found</param>
@@ -1837,8 +1821,6 @@ namespace SandcastleBuilder.Utils
                     throw new BuilderException("PRJ0002", "The selected file is for a more recent version of " +
                         "the help file builder.  Please upgrade your copy to load the file.");
 
-                loadingProperties = true;
-
                 // Note that many properties don't use the final value as they don't contain variables that
                 // need replacing.
                 foreach(ProjectProperty prop in this.ProjectPropertyCache.Values)
@@ -1900,10 +1882,6 @@ namespace SandcastleBuilder.Utils
             {
                 throw new BuilderException("PRJ0003", String.Format(CultureInfo.CurrentCulture,
                     "Error reading project from '{0}':\r\n{1}", msBuildProject.FullPath, ex.Message), ex);
-            }
-            finally
-            {
-                loadingProperties = false;
             }
         }
 
@@ -2003,7 +1981,7 @@ namespace SandcastleBuilder.Utils
 
             switch(ext)
             {
-                case ".asp":        // Content/config
+                case ".asp":        // Content/configuration
                 case ".aspx":
                 case ".ascx":
                 case ".config":
@@ -2059,25 +2037,6 @@ namespace SandcastleBuilder.Utils
             // As such, we track the dirty state for ourselves.
             isDirty = true;
             this.OnDirtyChanged(EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// Get a collection containing all user-defined properties
-        /// </summary>
-        /// <returns>A collection containing all properties determined not to be help file builder project
-        /// properties, MSBuild build engine related properties, or environment variables.</returns>
-        public Collection<ProjectProperty> GetUserDefinedProperties()
-        {
-            Collection<ProjectProperty> userProps = new Collection<ProjectProperty>();
-
-            if(msBuildProject != null && propertyCache != null)
-                foreach(ProjectProperty prop in msBuildProject.AllEvaluatedProperties)
-                    if(!prop.IsEnvironmentProperty && !prop.IsGlobalProperty && !prop.IsImported &&
-                      !prop.IsReservedProperty && !propertyCache.ContainsKey(prop.Name) &&
-                      restrictedProps.IndexOf(prop.Name) == -1)
-                        userProps.Add(prop);
-
-            return userProps;
         }
 
         /// <summary>
@@ -2267,48 +2226,15 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         public void RefreshProjectProperties()
         {
-            this.EnsureProjectIsCurrent(false);
-
             projectPropertyCache = null;
             docSources = null;
+            apiFilter = null;
+            helpAttributes = null;
+            namespaceSummaries = null;
+            componentConfigs = null;
+            plugInConfigs = null;
 
             this.LoadProperties();
-        }
-
-        // TODO: This probably isn't necessary anymore. If removed, make sure the schema version gets updated
-        // elsewhere such as in LoadProperties().
-        /// <summary>
-        /// This is used to ensure that all local collection project properties have been stored in the MSBuild
-        /// project file and that path-type properties are current based on the current project location.
-        /// </summary>
-        /// <param name="forceUpdate">True to force an update of all affected properties or false to only update
-        /// those that need it.</param>
-        /// <remarks>This only affects the property-based collection properties and path-type properties.  Simple
-        /// types and item group element properties are stored when modified.  This will also ensure that the
-        /// <c>SHFBSchemaVersion</c> is set to the current version too.</remarks>
-        public void EnsureProjectIsCurrent(bool forceUpdate)
-        {
-            ProjectProperty property;
-            Version schemaVersion = new Version(1, 0, 0, 0);
-
-            // TODO: This could probably be put in the docSources_ListChanged() event handler
-            if(docSources != null && docSources.IsDirty)
-            {
-                msBuildProject.SetProperty("DocumentationSources", docSources.ToXml());
-                docSources.IsDirty = false;
-            }
-
-            // Update the schema version if necessary but only if the project is dirty
-            if(this.IsDirty)
-            {
-                property = msBuildProject.AllEvaluatedProperties.FirstOrDefault(p => p.Name == "SHFBSchemaVersion");
-
-                if(property != null && !String.IsNullOrEmpty(property.EvaluatedValue))
-                    schemaVersion = new Version(property.EvaluatedValue);
-
-                if(schemaVersion != SandcastleProject.SchemaVersion)
-                    msBuildProject.SetProperty("SHFBSchemaVersion", SandcastleProject.SchemaVersion.ToString(4));
-            }
         }
 
         /// <summary>
@@ -2317,17 +2243,25 @@ namespace SandcastleBuilder.Utils
         /// <param name="filename">The filename for the project</param>
         public void SaveProject(string filename)
         {
-            bool forceUpdate;
+            Version schemaVersion;
 
             try
             {
                 filename = Path.GetFullPath(filename);
-                forceUpdate = (filename != msBuildProject.FullPath);
 
                 msBuildProject.FullPath = filename;
-                this.EnsureProjectIsCurrent(forceUpdate);
+
+                // Update the schema version if necessary but only if the project is dirty
+                var property = msBuildProject.AllEvaluatedProperties.FirstOrDefault(p => p.Name == "SHFBSchemaVersion");
+
+                if(property == null || !Version.TryParse(property.EvaluatedValue, out schemaVersion))
+                    schemaVersion = new Version(1, 0, 0, 0);
+
+                if(schemaVersion != SandcastleProject.SchemaVersion)
+                    msBuildProject.SetProperty("SHFBSchemaVersion", SandcastleProject.SchemaVersion.ToString(4));
 
                 msBuildProject.Save(filename);
+
                 isDirty = false;
                 this.OnDirtyChanged(EventArgs.Empty);
             }

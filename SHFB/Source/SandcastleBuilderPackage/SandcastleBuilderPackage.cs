@@ -487,7 +487,7 @@ namespace SandcastleBuilder.Package
                 try
                 {
                     var bp = new SandcastleBuilder.Utils.BuildEngine.BuildProcess(project);
-                    outputPath = bp.TransformText(outputPath);
+                    outputPath = bp.SubstitutionTags.TransformText(outputPath);
                 }
                 catch
                 {

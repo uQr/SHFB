@@ -1435,7 +1435,7 @@ namespace SandcastleBuilder.Gui
                 try
                 {
                     var bp = new BuildProcess(project);
-                    outputPath = bp.SubsitutionTags.TransformText(outputPath);
+                    outputPath = bp.SubstitutionTags.TransformText(outputPath);
                 }
                 catch
                 {

@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder WPF Controls
 // File    : EntityReferencesControl.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -596,7 +596,7 @@ namespace SandcastleBuilder.WPF.UserControls
             }
 
             // Index the comments file documentation sources
-            foreach(string file in currentProject.DocumentationSources.CommentsFiles)
+            foreach(string file in currentProject.DocumentationSources.SelectMany(ds => ds.CommentsFiles))
             {
                 indexTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -605,9 +605,9 @@ namespace SandcastleBuilder.WPF.UserControls
 
             // Also, index the comments files in project documentation sources
             foreach(DocumentationSource ds in currentProject.DocumentationSources)
-                foreach(var sourceProject in DocumentationSource.Projects(ds.SourceFile, ds.IncludeSubFolders,
-                    !String.IsNullOrEmpty(ds.Configuration) ? ds.Configuration : currentProject.Configuration,
-                    !String.IsNullOrEmpty(ds.Platform) ? ds.Platform : currentProject.Platform))
+                foreach(var sourceProject in ds.Projects(
+                  !String.IsNullOrEmpty(ds.Configuration) ? ds.Configuration : currentProject.Configuration,
+                  !String.IsNullOrEmpty(ds.Platform) ? ds.Platform : currentProject.Platform))
                 {
                     indexTokenSource.Token.ThrowIfCancellationRequested();
 

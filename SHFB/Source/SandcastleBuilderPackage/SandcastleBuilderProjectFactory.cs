@@ -200,8 +200,6 @@ namespace SandcastleBuilder.Package
                 // to do is load a copy and force it to save a new copy.
                 using(SandcastleProject p = new SandcastleProject(bstrFileName, true))
                 {
-                    p.MarkAsDirty();
-                    p.EnsureProjectIsCurrent(true);
                     p.SaveProject(bstrFileName);
                 }
 

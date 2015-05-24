@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -430,7 +430,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// <summary>
         /// This returns the substitution tag replacement handler instance
         /// </summary>
-        public SubstitutionTagReplacement SubsitutionTags
+        public SubstitutionTagReplacement SubstitutionTags
         {
             get { return substitutionTags; }
         }
@@ -2180,7 +2180,7 @@ AllDone:
             // to see if the project has any.
             this.ExecutePlugIns(ExecutionBehaviors.Before);
 
-            if(project.DocumentationSources.Count == 0)
+            if(project.DocumentationSources.Count() == 0)
                 throw new BuilderException("BE0039", "The project does not have any documentation sources defined");
 
             // Clone the project's references.  These will be added to a build project later on so we'll note the
@@ -2237,7 +2237,7 @@ AllDone:
 
                     this.ReportProgress("Source: {0}", ds.SourceFile);
 
-                    foreach(var sourceProject in DocumentationSource.Projects(ds.SourceFile, ds.IncludeSubFolders,
+                    foreach(var sourceProject in ds.Projects(
                       !String.IsNullOrEmpty(ds.Configuration) ? ds.Configuration : project.Configuration,
                       !String.IsNullOrEmpty(ds.Platform) ? ds.Platform : project.Platform))
                     {
@@ -2287,7 +2287,7 @@ AllDone:
                         fileCount++;
                     }
 
-                    foreach(string asmName in DocumentationSource.Assemblies(ds.SourceFile, ds.IncludeSubFolders))
+                    foreach(string asmName in ds.Assemblies)
                     {
                         if(!assembliesList.Contains(asmName))
                         {
@@ -2302,8 +2302,7 @@ AllDone:
                         fileCount++;
                     }
 
-                    foreach(string commentsName in DocumentationSource.CommentsFiles(ds.SourceFile,
-                      ds.IncludeSubFolders))
+                    foreach(string commentsName in ds.CommentsFiles)
                     {
                         if(!commentsList.Contains(commentsName))
                         {

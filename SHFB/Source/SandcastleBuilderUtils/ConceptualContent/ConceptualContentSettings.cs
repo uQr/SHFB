@@ -129,7 +129,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
             bool missingFile = false;
 
             builder.ReportProgress("Copying standard token shared content file...");
-            builder.SubsitutionTags.TransformTemplate("HelpFileBuilderTokens.tokens", builder.TemplateFolder,
+            builder.SubstitutionTags.TransformTemplate("HelpFileBuilderTokens.tokens", builder.TemplateFolder,
                 builder.WorkingFolder);
 
             builder.ReportProgress("Checking for other token files...");
@@ -144,7 +144,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 {
                     builder.ReportProgress("    {0} -> {1}", tokenFile.FullPath,
                         Path.Combine(builder.WorkingFolder, Path.GetFileName(tokenFile.FullPath)));
-                    builder.SubsitutionTags.TransformTemplate(Path.GetFileName(tokenFile.FullPath),
+                    builder.SubstitutionTags.TransformTemplate(Path.GetFileName(tokenFile.FullPath),
                         Path.GetDirectoryName(tokenFile.FullPath), builder.WorkingFolder);
                 }
 

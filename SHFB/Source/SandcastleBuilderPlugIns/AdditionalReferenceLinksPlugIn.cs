@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : AdditionalReferenceLinksPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/23/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -297,7 +297,7 @@ namespace SandcastleBuilder.PlugIns
                         target.Attributes.Append(attr);
 
                         attr = configFile.CreateAttribute("groupId");
-                        attr.Value = builder.SubsitutionTags.TransformText("Project_Ref_{@UniqueID}");
+                        attr.Value = builder.SubstitutionTags.TransformText("Project_Ref_{@UniqueID}");
                         target.Attributes.Append(attr);
 
                         // Keep the current project's stuff listed last so that it takes precedence
@@ -353,7 +353,7 @@ namespace SandcastleBuilder.PlugIns
                         target.Attributes.Append(attr);
 
                         attr = configFile.CreateAttribute("groupId");
-                        attr.Value = builder.SubsitutionTags.TransformText("Project_{@UniqueID}");
+                        attr.Value = builder.SubstitutionTags.TransformText("Project_{@UniqueID}");
                         target.Attributes.Append(attr);
 
                         // Keep the current project's stuff listed last so that it takes precedence

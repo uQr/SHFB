@@ -719,7 +719,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 // Write out the help file version project property value
                 writer.WriteStartElement("item");
                 writer.WriteAttributeString("id", "PBM_FileVersion");
-                writer.WriteValue(builder.SubsitutionTags.TransformText(builder.CurrentProject.HelpFileVersion));
+                writer.WriteValue(builder.SubstitutionTags.TransformText(builder.CurrentProject.HelpFileVersion));
                 writer.WriteEndElement();
 
                 // If no title is specified, use the display title
@@ -743,7 +743,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("name", attr.AttributeName);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.SubsitutionTags.TransformText(attr.AttributeValue));
+                    writer.WriteValue(builder.SubstitutionTags.TransformText(attr.AttributeValue));
 
                     writer.WriteEndElement();
                 }
@@ -755,7 +755,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("name", attr.AttributeName);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.SubsitutionTags.TransformText(attr.AttributeValue));
+                    writer.WriteValue(builder.SubstitutionTags.TransformText(attr.AttributeValue));
 
                     writer.WriteEndElement();
                 }
@@ -767,7 +767,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                     writer.WriteAttributeString("index", kw.Index);
 
                     // Replace tags with their project property value
-                    writer.WriteValue(builder.SubsitutionTags.TransformText(kw.Term));
+                    writer.WriteValue(builder.SubstitutionTags.TransformText(kw.Term));
 
                     writer.WriteEndElement();
                 }

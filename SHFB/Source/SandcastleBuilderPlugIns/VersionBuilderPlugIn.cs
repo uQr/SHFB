@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : VersionBuilderPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/03/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -14,13 +14,13 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.6.0.3  12/01/2007  EFW  Created the code
-// 1.8.0.0  08/13/2008  EFW  Updated to support the new project format
-// 1.9.0.0  06/27/2010  EFW  Added support for /rip option
-// -------  12/17/2013  EFW  Updated to use MEF for the plug-ins
-//          12/28/2013  EFW  Updated to run VersionBuilder tool as an MSBuild task in GenerateRefInfo.proj
+// 12/01/2007  EFW  Created the code
+// 08/13/2008  EFW  Updated to support the new project format
+// 06/27/2010  EFW  Added support for /rip option
+// 12/17/2013  EFW  Updated to use MEF for the plug-ins
+// 12/28/2013  EFW  Updated to run VersionBuilder tool as an MSBuild task in GenerateRefInfo.proj
 //===============================================================================================================
 
 using System;
@@ -198,7 +198,7 @@ namespace SandcastleBuilder.PlugIns
                 // Not needed for current project
                 if(vs.HelpFileProject != null)
                 {
-                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true))
+                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true, true))
                     {
                         // We'll use a working folder below the current project's working folder
                         workingPath = builder.WorkingFolder + vs.HelpFileProject.GetHashCode().ToString("X",
@@ -253,7 +253,6 @@ namespace SandcastleBuilder.PlugIns
             XmlDocument sharedContent;
             XmlNode root, node;
             string sharedContentFilename, hashValue;
-            List<string> uniqueVersions = new List<string>();
 
             builder.ReportProgress("Removing standard version information items from shared content file");
 

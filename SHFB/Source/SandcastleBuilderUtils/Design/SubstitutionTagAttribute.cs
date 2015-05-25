@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SubstitutionTagAttribute.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/10/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -26,7 +26,7 @@ namespace SandcastleBuilder.Utils.Design
     /// This attribute is used to mark substitution tag replacement methods
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    internal class SubstitutionTagAttribute : Attribute
+    public sealed class SubstitutionTagAttribute : Attribute
     {
     }
 }

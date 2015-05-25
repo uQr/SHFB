@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : SandcastleProject.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -142,7 +142,6 @@ namespace SandcastleBuilder.Utils
         // Local property info cache
         private static Dictionary<string, PropertyInfo> propertyCache = InitializePropertyCache();
         private static PropertyDescriptorCollection pdcCache;
-        private bool isDirty;
 
         // Path and build-related properties
         private FolderPath hhcPath, workingPath, componentPath;
@@ -314,7 +313,7 @@ namespace SandcastleBuilder.Utils
         /// </summary>
         public bool IsDirty
         {
-            get { return isDirty || msBuildProject.Xml.HasUnsavedChanges; }
+            get { return msBuildProject.Xml.HasUnsavedChanges; }
         }
 
         /// <summary>
@@ -1521,27 +1520,6 @@ namespace SandcastleBuilder.Utils
         }
         #endregion
 
-        #region Events
-        //=====================================================================
-
-        /// <summary>
-        /// This event is raised when the dirty property changes
-        /// </summary>
-        public event EventHandler DirtyChanged;
-
-        /// <summary>
-        /// This raises the <see cref="DirtyChanged"/> event
-        /// </summary>
-        /// <param name="e">The event arguments</param>
-        private void OnDirtyChanged(EventArgs e)
-        {
-            var handler = DirtyChanged;
-
-            if(handler != null)
-                handler(this, e);
-        }
-        #endregion
-
         #region Constructors
         //=====================================================================
 
@@ -1591,16 +1569,18 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// Load a Sandcastle Builder project from the given filename.
+        /// Load a Sandcastle Builder project from the given filename
         /// </summary>
         /// <param name="filename">The filename to load</param>
         /// <param name="mustExist">Specify true if the file must exist or false if a new project should be
         /// created if the file does not exist.</param>
+        /// <param name="useFinalValues">True to use final evaluated property values, or false to use the
+        /// unevaluated property values.  For builds, this should always be true.  If loading the project for
+        /// editing, it should always be false.</param>
         /// <exception cref="ArgumentException">This is thrown if a filename is not specified or if it does not
         /// exist and <c>mustExist</c> is true.</exception>
         /// <overloads>There are three overloads for the constructor</overloads>
-        public SandcastleProject(string filename, bool mustExist)
-            : this()
+        public SandcastleProject(string filename, bool mustExist, bool useFinalValues) : this()
         {
             string template;
 
@@ -1643,6 +1623,7 @@ namespace SandcastleBuilder.Utils
                     msBuildProject = new Project(filename);
             }
 
+            this.UsingFinalValues = useFinalValues;
             this.LoadProperties();
         }
 
@@ -1662,40 +1643,6 @@ namespace SandcastleBuilder.Utils
             msBuildProject = existingProject;
 
             this.UsingFinalValues = true;
-            this.LoadProperties();
-        }
-
-        /// <summary>
-        /// This is used to clone an existing project in order to build it without affecting the existing
-        /// project's properties.
-        /// </summary>
-        /// <param name="cloneProject">The project to clone</param>
-        /// <remarks>This is used to perform partial builds where we may want to use alternate property values.</remarks>
-        public SandcastleProject(SandcastleProject cloneProject) : this()
-        {
-            string newName = Guid.NewGuid().ToString();
-
-            this.UsingFinalValues = true;
-
-            using(StringReader sr = new StringReader(cloneProject.msBuildProject.Xml.RawXml))
-            {
-                using(XmlReader xr = XmlReader.Create(sr))
-                {
-                    msBuildProject = new Project(xr);
-                }
-            }
-
-            // Use the same folder so that relative paths have the same base location.  Use a different filename
-            // to prevent the cloned instance from being unloaded by the build engine.
-            msBuildProject.FullPath = Path.Combine(Path.GetDirectoryName(cloneProject.Filename),
-                newName + ".shfbproj");
-
-            this.Configuration = cloneProject.Configuration;
-            this.Platform = cloneProject.Platform;
-
-            if(!String.IsNullOrEmpty(cloneProject.MSBuildOutDir))
-                this.MSBuildOutDir = cloneProject.MSBuildOutDir;
-
             this.LoadProperties();
         }
         #endregion
@@ -2027,19 +1974,6 @@ namespace SandcastleBuilder.Utils
         }
 
         /// <summary>
-        /// This is used to mark the project as dirty and in need of being saved
-        /// </summary>
-        /// <event cref="DirtyChanged">This event is raised to let interested parties know that the project's
-        /// dirty state has been changed.</event>
-        public void MarkAsDirty()
-        {
-            // We cannot mark the MSBuild project as dirty as the value sticks and never gets cleared.
-            // As such, we track the dirty state for ourselves.
-            isDirty = true;
-            this.OnDirtyChanged(EventArgs.Empty);
-        }
-
-        /// <summary>
         /// This is used to determine whether or not the given name can be used for a user-defined project
         /// property.
         /// </summary>
@@ -2261,9 +2195,6 @@ namespace SandcastleBuilder.Utils
                     msBuildProject.SetProperty("SHFBSchemaVersion", SandcastleProject.SchemaVersion.ToString(4));
 
                 msBuildProject.Save(filename);
-
-                isDirty = false;
-                this.OnDirtyChanged(EventArgs.Empty);
             }
             catch(Exception ex)
             {

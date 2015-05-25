@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : ProjectElement.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -21,6 +21,7 @@
 
 using System;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Build.Evaluation;
 
@@ -29,7 +30,7 @@ namespace SandcastleBuilder.Utils
     /// <summary>
     /// This class is a wrapper for build items in the project.
     /// </summary>
-    public class ProjectElement
+    public class ProjectElement : INotifyPropertyChanged
     {
         #region Private data members
         //=====================================================================
@@ -50,8 +51,11 @@ namespace SandcastleBuilder.Utils
             get { return item.ItemType; }
             set
             {
-                item.ItemType = value;
-                projectFile.MarkAsDirty();
+                if(item.ItemType != value)
+                {
+                    item.ItemType = value;
+                    this.OnPropertyChanged();
+                }
             }
         }
 
@@ -74,7 +78,7 @@ namespace SandcastleBuilder.Utils
                         value += @"\";
 
                     item.UnevaluatedInclude = value;
-                    projectFile.MarkAsDirty();
+                    this.OnPropertyChanged();
                 }
             }
         }
@@ -135,7 +139,27 @@ namespace SandcastleBuilder.Utils
 
             item = project.MSBuildProject.AddItem(itemType, itemPath)[0];
             projectFile.MSBuildProject.ReevaluateIfNecessary();
-            projectFile.MarkAsDirty();
+        }
+        #endregion
+
+        #region INotifyPropertyChanged Members
+        //=====================================================================
+
+        /// <summary>
+        /// The property changed event
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// This raises the <see cref="PropertyChanged"/> event
+        /// </summary>
+        /// <param name="propertyName">The property name that changed</param>
+        protected void OnPropertyChanged([CallerMemberName]string propertyName = null)
+        {
+            var handler = PropertyChanged;
+
+            if(handler != null)
+                handler(this, new PropertyChangedEventArgs(propertyName));
         }
         #endregion
 
@@ -186,6 +210,7 @@ namespace SandcastleBuilder.Utils
             if(String.Compare(name, BuildItemMetadata.BuildAction, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 item.ItemType = value;
+                this.OnPropertyChanged(name);
                 return;
             }
 
@@ -193,6 +218,7 @@ namespace SandcastleBuilder.Utils
             if(String.Compare(name, BuildItemMetadata.IncludePath, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 item.UnevaluatedInclude = value;
+                this.OnPropertyChanged(name);
                 return;
             }
 
@@ -201,7 +227,7 @@ namespace SandcastleBuilder.Utils
             else
                 item.SetMetadataValue(name, value);
 
-            projectFile.MarkAsDirty();
+            this.OnPropertyChanged(name);
         }
 
         /// <summary>
@@ -210,7 +236,7 @@ namespace SandcastleBuilder.Utils
         public void RemoveFromProjectFile()
         {
             projectFile.MSBuildProject.RemoveItem(item);
-            projectFile.MarkAsDirty();
+            projectFile.MSBuildProject.ReevaluateIfNecessary();
 
             projectFile = null;
             item = null;

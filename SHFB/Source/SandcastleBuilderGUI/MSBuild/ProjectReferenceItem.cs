@@ -156,6 +156,7 @@ namespace SandcastleBuilder.Gui.MSBuild
         {
             this.Include = projectPath.PersistablePath;
             this.GetProjectMetadata(true);
+            this.OnPropertyChanged("ProjectPath");
         }
 
         /// <summary>

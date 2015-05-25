@@ -117,7 +117,6 @@
     <Compile Include="ConceptualContent\CodeEntityReference.cs" />
     <Compile Include="ConceptualContent\CodeReference.cs" />
     <Compile Include="ConceptualContent\ConceptualContentSettings.cs" />
-    <Compile Include="ConceptualContent\ContentType.cs" />
     <Compile Include="ConceptualContent\DocumentType.cs" />
     <Compile Include="ConceptualContent\ImageReference.cs" />
     <Compile Include="ConceptualContent\Token.cs" />
@@ -420,12 +419,10 @@
     <EmbeddedResource Include="Controls\FolderPathUserControl.bmp" />
     <Compile Include="BuildAction.cs" />
     <Compile Include="ConceptualContent\ApiParentMode.cs" />
-    <Compile Include="ConceptualContent\CodeSnippetCollection.cs" />
     <Compile Include="ConceptualContent\ITableOfContents.cs" />
     <Compile Include="ConceptualContent\ResourceItem.cs" />
     <Compile Include="ConceptualContent\TopicFile.cs" />
     <Compile Include="Design\BuildActionEnumConverter.cs" />
-    <Compile Include="Design\DynamicReadOnlyPropertyDescriptor.cs" />
     <Compile Include="Design\NamespaceSummaryItemEditorDlg.cs">
       <SubType>Form</SubType>
     </Compile>

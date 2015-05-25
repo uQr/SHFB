@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : ProjectExplorerWindow.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -25,7 +25,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
@@ -80,6 +79,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
         private FileTree fileTree;
         private DocumentationSourceCollection docSources;
         private ReferenceItemCollection projectReferences;
+        private BindingList<FileItem> fileItems;
 
         // This is used to search for a few common binary characters in the range \x00 to \x1F which should be
         // sufficient.  Note that \x1A (Ctrl+Z) is excluded as that's a common End of File marker.
@@ -233,7 +233,10 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                 // Saving the project sets the given filename as the project's filename
                 currentProject.SaveProject(filename);
+
                 MainForm.UpdateMruList(currentProject.Filename);
+                MainForm.Host.UpdateFilenameInfo();
+
                 pgProps.Refresh();
                 tvProjectFiles.Nodes[0].Text = Path.GetFileNameWithoutExtension(filename);
                 return true;
@@ -383,8 +386,19 @@ namespace SandcastleBuilder.Gui.ContentEditors
             if(currentProject != null)
             {
                 docSources.SaveToProject();
-                currentProject.MarkAsDirty();
+                MainForm.Host.UpdateFilenameInfo();
             }
+        }
+
+        /// <summary>
+        /// This is used to notify the project of changes to the references and file item collections
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void referencesAndFiles_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            if(currentProject != null)
+                MainForm.Host.UpdateFilenameInfo();
         }
 
         /// <summary>
@@ -510,12 +524,17 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 this.LoadReferences(true);
 
                 // Load the folders and files
-                fileTree.LoadTree(currentProject.FileItems.ToList());
+                fileItems = new BindingList<FileItem>(currentProject.FileItems.ToList());
+                fileItems.ListChanged += referencesAndFiles_ListChanged;
+
+                fileTree.LoadTree(fileItems);
                 root.Expand();
             }
             finally
             {
                 tvProjectFiles.ResumeLayout();
+
+                MainForm.Host.UpdateFilenameInfo();
             }
         }
 
@@ -593,6 +612,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 tvProjectFiles.Nodes[0].Nodes.Add(root);
 
                 projectReferences = new ReferenceItemCollection(currentProject);
+                projectReferences.ListChanged += referencesAndFiles_ListChanged;
             }
             else
             {
@@ -600,16 +620,13 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
                 if(matches.Length == 1)
                     root = matches[0];
-
-                if(projectReferences != null)
-                    projectReferences.Sort();
             }
 
             if(root != null && projectReferences != null)
             {
                 root.Nodes.Clear();
 
-                foreach(ReferenceItem refItem in projectReferences)
+                foreach(ReferenceItem refItem in projectReferences.OrderBy(r => r.Reference))
                 {
                     source = new TreeNode(refItem.Reference);
                     source.Name = refItem.Reference;
@@ -939,6 +956,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     newName = Path.Combine(Path.GetDirectoryName(currentProject.Filename), e.Label + ".shfbproj");
                     File.Move(currentProject.Filename, newName);
                     currentProject.SaveProject(newName);
+                    MainForm.Host.UpdateFilenameInfo();
                 }
                 else
                 {
@@ -1368,12 +1386,16 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
             try
             {
-                if(MessageBox.Show("The item '" + selectedNode.Text +
-                  "' will be removed from the project.  Are you sure?",
-                  Constants.AppName, MessageBoxButtons.YesNo,
-                  MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) ==
-                  DialogResult.Yes)
+                if(MessageBox.Show("The item '" + selectedNode.Text + "' will be removed from the project.  " +
+                  "Are you sure?", Constants.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                  MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                {
                     fileTree.RemoveNode(selectedNode, false);
+
+                    var nodeData = (NodeData)selectedNode.Tag;
+
+                    fileItems.Remove((FileItem)nodeData.Item);
+                }
             }
             catch(Exception ex)
             {
@@ -1382,8 +1404,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
             }
             finally
             {
-                tvProjectFiles_AfterSelect(tvProjectFiles,
-                    new TreeViewEventArgs(tvProjectFiles.SelectedNode));
+                tvProjectFiles_AfterSelect(tvProjectFiles, new TreeViewEventArgs(tvProjectFiles.SelectedNode));
             }
         }
 
@@ -1400,12 +1421,16 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
             try
             {
-                if(MessageBox.Show("The item '" + selectedNode.Text +
-                  "' will be permanently deleted.  Are you sure?",
-                  Constants.AppName, MessageBoxButtons.YesNo,
-                  MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) ==
-                  DialogResult.Yes)
+                if(MessageBox.Show("The item '" + selectedNode.Text + "' will be permanently deleted.  Are you sure?",
+                  Constants.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                  MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                {
                     fileTree.RemoveNode(selectedNode, true);
+
+                    var nodeData = (NodeData)selectedNode.Tag;
+
+                    fileItems.Remove((FileItem)nodeData.Item);
+                }
             }
             catch(Exception ex)
             {
@@ -1472,6 +1497,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
 
             folderItem = currentProject.AddFolderToProject(newFolder);
 
+            fileItems.Add(folderItem);
             fileTree.LoadTree(new[] { folderItem });
 
             if(parent == null)
@@ -1493,7 +1519,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void miAddExistingFolder_Click(object sender, EventArgs e)
         {
-            Collection<FileItem> toAdd = new Collection<FileItem>();
+            List<FileItem> toAdd = new List<FileItem>();
             TreeNode parent = tvProjectFiles.SelectedNode;
             TreeNode[] matches;
             FileItem folderItem;
@@ -1557,6 +1583,9 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 // Get all of the files and subfolders within it too
                 this.AddSubFolders(newFolder, toAdd);
 
+                foreach(var item in toAdd)
+                    fileItems.Add(item);
+
                 fileTree.LoadTree(toAdd);
             }
             finally
@@ -1579,8 +1608,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// Add all files and subfolders to the project
         /// </summary>
         /// <param name="rootFolder">The root folder</param>
-        /// <param name="items">The file item collection</param>
-        private void AddSubFolders(string rootFolder, Collection<FileItem> items)
+        /// <param name="items">The file items added</param>
+        private void AddSubFolders(string rootFolder, List<FileItem> items)
         {
             foreach(string file in Directory.EnumerateFiles(rootFolder, "*.*"))
                 items.Add(currentProject.AddFileToProject(file, file));
@@ -1599,7 +1628,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void miAddExistingItem_Click(object sender, EventArgs e)
         {
-            Collection<FileItem> toAdd = new Collection<FileItem>();
+            List<FileItem> toAdd = new List<FileItem>();
             NodeData nodeData;
             TreeNode parent = tvProjectFiles.SelectedNode;
             FileItem fileItem;
@@ -1648,6 +1677,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
                             {
                                 newPath = Path.Combine(path, Path.GetFileName(file));
                                 fileItem = currentProject.AddFileToProject(file, newPath);
+
+                                fileItems.Add(fileItem);
                                 toAdd.Add(fileItem);
                             }
 
@@ -1834,6 +1865,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
                         Cursor.Current = Cursors.WaitCursor;
 
                         fileItem = currentProject.AddFileToProject(file, dlg.FileName);
+
+                        fileItems.Add(fileItem);
                         fileTree.LoadTree(new[] { fileItem });
 
                         // If it's a conceptual content topic file, set the unique ID in it
@@ -2231,7 +2264,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// <param name="e">The event arguments</param>
         private void miCutCopy_Click(object sender, EventArgs e)
         {
-            Collection<string> files = new Collection<string>();
+            List<string> files = new List<string>();
             TreeNode node = tvProjectFiles.SelectedNode;
 
             if(node != null)
@@ -2242,10 +2275,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 string[] fileArray = new string[files.Count];
                 files.CopyTo(fileArray, 0);
 
-                DataObject data = new DataObject(DataFormats.FileDrop,
-                    fileArray);
-                MemoryStream dropEffect = new MemoryStream(new byte[] {
-                    (byte)(sender == miCut ? 2 : 5), 0, 0, 0 });
+                DataObject data = new DataObject(DataFormats.FileDrop, fileArray);
+                MemoryStream dropEffect = new MemoryStream(new byte[] { (byte)(sender == miCut ? 2 : 5), 0, 0, 0 });
 
                 data.SetData("Preferred DropEffect", dropEffect);
                 Clipboard.SetDataObject(data);
@@ -2256,8 +2287,8 @@ namespace SandcastleBuilder.Gui.ContentEditors
         /// This is used to get a collection of files to copy to the clipboard
         /// </summary>
         /// <param name="node">The tree node at which to start</param>
-        /// <param name="files">The file collection</param>
-        private void GetFilesForClipboard(TreeNode node, Collection<string> files)
+        /// <param name="files">The list used to contained the returned files</param>
+        private void GetFilesForClipboard(TreeNode node, List<string> files)
         {
             NodeData nodeData = (NodeData)node.Tag;
 
@@ -2293,10 +2324,10 @@ namespace SandcastleBuilder.Gui.ContentEditors
                 return;
 
             string[] files = (string[])data.GetData(DataFormats.FileDrop);
-            MemoryStream stream = (MemoryStream)data.GetData(
-                "Preferred DropEffect", true);
+            MemoryStream stream = (MemoryStream)data.GetData("Preferred DropEffect", true);
 
             int dropEffect = stream.ReadByte();
+
             if(dropEffect != 2 && dropEffect != 5)
                 return;
 
@@ -2342,15 +2373,13 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     if(rootFolder == null)
                         newPath = Path.Combine(basePath, Path.GetFileName(file));
                     else
-                        newPath = Path.Combine(basePath, file.Substring(
-                            rootFolder.Length));
+                        newPath = Path.Combine(basePath, file.Substring(rootFolder.Length));
 
                     if((rootFolder != null || dropEffect == 2) &&
                       String.Compare(file, newPath, StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        MessageBox.Show("Files cannot be copied onto themselves",
-                            Constants.AppName, MessageBoxButtons.OK,
-                            MessageBoxIcon.Exclamation);
+                        MessageBox.Show("Files cannot be copied onto themselves", Constants.AppName,
+                            MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                         break;
                     }
 
@@ -2377,8 +2406,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
                     }
                 }
 
-                // If cut, remove the old items now that everything has been
-                // added successfully.
+                // If cut, remove the old items now that everything has been added successfully
                 if(dropEffect == 2)
                     foreach(string file in files)
                     {
@@ -2402,8 +2430,7 @@ namespace SandcastleBuilder.Gui.ContentEditors
             catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex);
-                MessageBox.Show(ex.Message, Constants.AppName,
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, Constants.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {

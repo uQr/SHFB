@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -625,7 +625,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
                 if(!project.UsingFinalValues)
                 {
                     originalProject = project;
-                    project = new SandcastleProject(originalProject);
+                    project = new SandcastleProject(originalProject.MSBuildProject);
                 }
 
                 Assembly asm = Assembly.GetExecutingAssembly();
@@ -2581,10 +2581,22 @@ AllDone:
                         this.ReportToolOutput(line);
 
                 } while(line != null);
+
+                System.Diagnostics.Debug.WriteLine("ReadStdOut thread stopped\r\n");
             }
             catch(OperationCanceledException)
             {
                 System.Diagnostics.Debug.WriteLine("ReadStdOut thread aborted\r\n");
+
+                try
+                {
+                    if(currentProcess != null)
+                        currentProcess.Kill();
+                }
+                catch
+                {
+                    // Ignore exceptions as the process may already have exited
+                }
             }
             catch(Exception ex)
             {
@@ -2601,8 +2613,6 @@ AllDone:
                     // Ignore exceptions as the process may already have exited
                 }
             }
-
-            System.Diagnostics.Debug.WriteLine("ReadStdOut thread stopped\r\n");
         }
 
         /// <summary>
@@ -2622,10 +2632,22 @@ AllDone:
                         this.ReportToolOutput(line);
 
                 } while(line != null);
+
+                System.Diagnostics.Debug.WriteLine("ReadStdErr thread stopped\r\n");
             }
             catch(OperationCanceledException)
             {
                 System.Diagnostics.Debug.WriteLine("ReadStdErr thread aborted\r\n");
+
+                try
+                {
+                    if(currentProcess != null)
+                        currentProcess.Kill();
+                }
+                catch
+                {
+                    // Ignore exceptions as the process may already have exited
+                }
             }
             catch(Exception ex)
             {
@@ -2642,8 +2664,6 @@ AllDone:
                     // Ignore exceptions as the process may already have exited
                 }
             }
-
-            System.Diagnostics.Debug.WriteLine("ReadStdErr thread stopped\r\n");
         }
 
         /// <summary>

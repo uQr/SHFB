@@ -152,7 +152,7 @@ namespace SandcastleBuilder.Utils.BuildEngine
             string templateText, transformedFile;
 
             if(templateFile == null)
-                throw new ArgumentNullException("template");
+                throw new ArgumentNullException("templateFile");
 
             if(sourceFolder == null)
                 throw new ArgumentNullException("sourceFolder");

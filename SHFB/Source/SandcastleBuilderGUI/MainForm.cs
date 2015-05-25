@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : MainForm.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -13,26 +13,26 @@
 // notice, the author's name, and all copyright notices must remain intact in all applications, documentation,
 // and source files.
 //
-// Version     Date     Who  Comments
+//    Date     Who  Comments
 // ==============================================================================================================
-// 1.0.0.0  08/02/2006  EFW  Created the code
-// 1.3.1.2  10/18/2006  EFW  Moved file logging to the BuildProcess class.  Added a Verbose Logging user setting.
-// 1.5.0.0  06/23/2007  EFW  Added user preferences dialog box and help file viewer options.
-// 1.5.0.2  07/03/2007  EFW  Added support for content file editor definitions and a content site map file.
-// 1.6.0.2  11/02/2007  EFW  Reworked support for custom build components
-// 1.6.0.3  11/16/2007  EFW  Added "Open After Build" option
-// 1.6.0.4  01/22/2008  EFW  Added support for drag and drop from Explorer
-// 1.6.0.7  04/24/2008  EFW  Added support for conceptual content
-// 1.8.0.0  06/20/2008  EFW  Converted the project to use an MSBuild file.  Changed the UI to a more Visual
-//                           Studio-like layout better suited to editing the project.
-// 1.9.0.0  07/05/2010  EFW  Added support for MS Help Viewer
-// 1.9.1.0  07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0.
-// 1.9.3.4  01/08/2012  EFW  Updated to use shared NewFromOtherFormatDlg
-// 1.9.3.4  01/20/2012  EFW  Updated to use the new topic previewer window
-// 1.9.5.0  10/05/2012  EFW  Added support for Help Viewer 2.0
-// -------  02/15/2014  EFW  Added support for the Open XML output format
-//          04/01/2015  EFW  Added support for the Markdown file format
-//          05/03/2015  EFW  Removed support for the MS Help 2 file format and the project converters
+// 08/02/2006  EFW  Created the code
+// 10/18/2006  EFW  Moved file logging to the BuildProcess class.  Added a Verbose Logging user setting
+// 06/23/2007  EFW  Added user preferences dialog box and help file viewer options
+// 07/03/2007  EFW  Added support for content file editor definitions and a content site map file
+// 11/02/2007  EFW  Reworked support for custom build components
+// 11/16/2007  EFW  Added "Open After Build" option
+// 01/22/2008  EFW  Added support for drag and drop from Explorer
+// 04/24/2008  EFW  Added support for conceptual content
+// 06/20/2008  EFW  Converted the project to use an MSBuild file.  Changed the UI to a more Visual Studio-like
+//                  layout better suited to editing the project.
+// 07/05/2010  EFW  Added support for MS Help Viewer
+// 07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0
+// 01/08/2012  EFW  Updated to use shared NewFromOtherFormatDlg
+// 01/20/2012  EFW  Updated to use the new topic previewer window
+// 10/05/2012  EFW  Added support for Help Viewer 2.0
+// 02/15/2014  EFW  Added support for the Open XML output format
+// 04/01/2015  EFW  Added support for the Markdown file format
+// 05/03/2015  EFW  Removed support for the MS Help 2 file format and the project converters
 //===============================================================================================================
 
 using System;
@@ -271,15 +271,14 @@ namespace SandcastleBuilder.Gui
         {
             List<string> values;
 
-            project = new SandcastleProject(projectName, mustExist);
-            project.DirtyChanged += new EventHandler(project_Modified);
+            project = new SandcastleProject(projectName, mustExist, false);
 
             projectExplorer.CurrentProject = projectProperties.CurrentProject = project;
 
             if(entityReferencesWindow != null)
                 entityReferencesWindow.CurrentProject = project;
 
-            this.project_Modified(this, EventArgs.Empty);
+            this.UpdateFilenameInfo();
 
             // Get the configuration and platform values
             values = project.MSBuildProject.ConditionedProperties["Configuration"];
@@ -539,14 +538,15 @@ namespace SandcastleBuilder.Gui
         /// <summary>
         /// This is used to update the filename information in the title bar
         /// </summary>
-        private void UpdateFilenameInfo()
+        internal void UpdateFilenameInfo()
         {
             if(project == null)
                 this.Text = Constants.AppName;
             else
                 this.Text = String.Format(CultureInfo.CurrentCulture, "{0}{1} - {2}",
                     Path.GetFileNameWithoutExtension(project.Filename),
-                    (project.IsDirty) ? "*" : String.Empty, Constants.AppName);
+                    (project.IsDirty || (projectProperties != null && projectProperties.IsDirty)) ? "*" :
+                    String.Empty, Constants.AppName);
         }
 
         /// <summary>
@@ -766,6 +766,9 @@ namespace SandcastleBuilder.Gui
 
             if(cancellationTokenSource != null)
             {
+                if(cancellationTokenSource.IsCancellationRequested)
+                    return;
+
                 if(MessageBox.Show("A build is currently taking place.  Do you want to abort it and exit?",
                   Constants.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
                 {
@@ -774,6 +777,7 @@ namespace SandcastleBuilder.Gui
                 }
 
                 miCancelBuild_Click(sender, e);
+                return;
             }
 
             if(!projectExplorer.AskToSaveProject())
@@ -898,24 +902,6 @@ namespace SandcastleBuilder.Gui
 
         #region Project and build event handlers
         //=====================================================================
-
-        /// <summary>
-        /// This updates the state of the form when the project is modified
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void project_Modified(object sender, EventArgs e)
-        {
-            if(this.InvokeRequired)
-            {
-                this.Invoke(new EventHandler(project_Modified), new object[] { sender, e });
-                return;
-            }
-
-            this.UpdateFilenameInfo();
-
-            projectProperties.RefreshProperties();
-        }
 
         /// <summary>
         /// This is used to report build progress
@@ -1188,29 +1174,9 @@ namespace SandcastleBuilder.Gui
         {
             if(cancellationTokenSource != null)
             {
-                if(cancellationTokenSource != null)
-                    cancellationTokenSource.Cancel();
-
-                try
-                {
-                    Cursor.Current = Cursors.WaitCursor;
-                    StatusBarTextProvider.UpdateProgress("Cancelling build...");
-
-                    while(buildProcess != null && buildProcess.CurrentBuildStep < BuildStep.Completed)
-                    {
-                        Application.DoEvents();
-                        Thread.Sleep(100);
-                    }
-
-                    StatusBarTextProvider.ResetProgressBar();
-                }
-                finally
-                {
-                    Cursor.Current = Cursors.Default;
-                }
+                StatusBarTextProvider.UpdateProgress("Cancelling build...");
+                cancellationTokenSource.Cancel();
             }
-
-            this.SetUIEnabledState(true);
         }
         #endregion
 

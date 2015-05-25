@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder
 // File    : ReferenceItemCollection.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/13/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -22,7 +22,6 @@
 //===============================================================================================================
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 
 using Microsoft.Build.Evaluation;
@@ -44,6 +43,7 @@ namespace SandcastleBuilder.Gui.MSBuild
         private const string COMReferenceType = "COMReference";
 
         private SandcastleProject projectFile;
+
         #endregion
 
         #region Constructor
@@ -67,23 +67,6 @@ namespace SandcastleBuilder.Gui.MSBuild
 
             foreach(ProjectItem item in msBuildProject.GetItems(COMReferenceType))
                 this.Add(new COMReferenceItem(projectFile, item));
-
-            this.Sort();
-        }
-        #endregion
-
-        #region Sort the collection
-        //=====================================================================
-
-        /// <summary>
-        /// This is used to sort the collection in ascending order
-        /// </summary>
-        public void Sort()
-        {
-            ((List<ReferenceItem>)base.Items).Sort((x, y) =>
-            {
-                return String.Compare(x.Reference, y.Reference, StringComparison.CurrentCultureIgnoreCase);
-            });
         }
         #endregion
 

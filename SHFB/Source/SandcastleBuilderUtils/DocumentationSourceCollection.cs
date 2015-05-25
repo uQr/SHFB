@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : DocumentationSourceCollection.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -23,7 +23,6 @@
 //===============================================================================================================
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;

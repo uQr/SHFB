@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Visual Studio Package
 // File    : SandcastleBuilderProjectFactory.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/16/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2011-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -198,7 +198,7 @@ namespace SandcastleBuilder.Package
 
                 // The SancastleProject class contains all the code needed to update the project so all we need
                 // to do is load a copy and force it to save a new copy.
-                using(SandcastleProject p = new SandcastleProject(bstrFileName, true))
+                using(SandcastleProject p = new SandcastleProject(bstrFileName, true, false))
                 {
                     p.SaveProject(bstrFileName);
                 }

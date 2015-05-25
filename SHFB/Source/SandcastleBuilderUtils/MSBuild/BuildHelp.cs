@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder MSBuild Tasks
 // File    : BuildHelp.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -15,16 +15,16 @@
 //
 //     Date     Who  Comments
 // ==============================================================================================================
-//  06/27/2008  EFW  Created the code
-//  12/19/2008  EFW  Updated to work with MSBuild 3.5 and Team Build
-//  04/20/2009  EFW  Added DumpLogOnFailure property
-//  07/06/2009  EFW  Added support for MS Help Viewer output files
-//  07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0.
-//  12/21/2013  EFW  Removed support for SHFBCOMPONENT root as the ComponentPath project property handles its
-//                   functionality now.
-//  02/15/2014  EFW  Added support for the Open XML output format
-//  03/30/2015  EFW  Added support for the Markdown output format
-//  05/03/2015  EFW  Removed support for the MS Help 2 file format
+// 06/27/2008  EFW  Created the code
+// 12/19/2008  EFW  Updated to work with MSBuild 3.5 and Team Build
+// 04/20/2009  EFW  Added DumpLogOnFailure property
+// 07/06/2009  EFW  Added support for MS Help Viewer output files
+// 07/09/2010  EFW  Updated for use with .NET 4.0 and MSBuild 4.0.
+// 12/21/2013  EFW  Removed support for SHFBCOMPONENT root as the ComponentPath project property handles its
+//                  functionality now.
+// 02/15/2014  EFW  Added support for the Open XML output format
+// 03/30/2015  EFW  Added support for the Markdown output format
+// 05/03/2015  EFW  Removed support for the MS Help 2 file format
 //===============================================================================================================
 
 using System;
@@ -53,7 +53,7 @@ namespace SandcastleBuilder.Utils.MSBuild
     /// <remarks>All messages from this task are logged with a high priority since it will run for a long time
     /// and we need to see the progress messages to know it's doing something.  If set to Normal and ran from
     /// within Visual Studio, it won't show the progress messages when the logging options are set to Minimal.</remarks>
-    public class BuildHelp : Task, ICancelableTask
+    public class BuildHelp : Task, ICancelableTask, IProgress<BuildProgressEventArgs>
     {
         #region Private data members
         //=====================================================================
@@ -351,7 +351,7 @@ namespace SandcastleBuilder.Utils.MSBuild
                 {
                     buildProcess = new BuildProcess(sandcastleProject)
                     {
-                        ProgressReportProvider = new Progress<BuildProgressEventArgs>(buildProcess_ReportProgress),
+                        ProgressReportProvider = this,
                         CancellationToken = cts.Token
                     };
 
@@ -484,14 +484,37 @@ namespace SandcastleBuilder.Utils.MSBuild
 
             return lastMatchingProject;
         }
+        #endregion
+
+        #region ICancelableTask Members
+        //=====================================================================
+
+        /// <summary>
+        /// Cancel the build
+        /// </summary>
+        /// <remarks>The build will be cancelled as soon as the next message arrives from the build process</remarks>
+        public void Cancel()
+        {
+            buildCancelled = true;
+
+            if(cts != null)
+                cts.Cancel();
+        }
+        #endregion
+
+        #region IProgress<BuildProgressEventArgs> Members
+        //=====================================================================
 
         /// <summary>
         /// This is called by the build process to report build progress
         /// </summary>
-        /// <param name="e">The event arguments</param>
-        private void buildProcess_ReportProgress(BuildProgressEventArgs e)
+        /// <param name="value">The event arguments</param>
+        /// <remarks>Since the build is synchronous in this task, we need to implement the interface and report
+        /// progress synchronously as well or the final few messages can get lost and it looks like the build
+        /// failed.</remarks>
+        public void Report(BuildProgressEventArgs value)
         {
-            Match m = reParseMessage.Match(e.Message);
+            Match m = reParseMessage.Match(value.Message);
             string outputPath;
 
             // Always log errors and warnings
@@ -505,30 +528,30 @@ namespace SandcastleBuilder.Utils.MSBuild
                         Log.LogError(null, m.Groups[4].Value, m.Groups[4].Value,
                             m.Groups[1].Value, 0, 0, 0, 0, m.Groups[5].Value.Trim());
                     else
-                        Log.LogMessage(MessageImportance.High, e.Message);
+                        Log.LogMessage(MessageImportance.High, value.Message);
             }
             else
                 if(this.Verbose)
-                    Log.LogMessage(MessageImportance.High, e.Message);
+                    Log.LogMessage(MessageImportance.High, value.Message);
                 else
                 {
                     // If not doing verbose logging, show warnings and let MSBuild filter them out if not
                     // wanted.  Errors will kill the build so we don't have to deal with them here.
-                    if(reWarning.IsMatch(e.Message))
-                        Log.LogWarning(e.Message);
+                    if(reWarning.IsMatch(value.Message))
+                        Log.LogWarning(value.Message);
                 }
 
-            if(e.StepChanged)
+            if(value.StepChanged)
             {
                 if(!this.Verbose)
-                    Log.LogMessage(MessageImportance.High, e.BuildStep.ToString());
+                    Log.LogMessage(MessageImportance.High, value.BuildStep.ToString());
 
-                lastBuildStep = e.BuildStep;
+                lastBuildStep = value.BuildStep;
 
-                if(e.HasCompleted)
+                if(value.HasCompleted)
                 {
                     // If successful, report the location of the help file/website
-                    if(e.BuildStep == BuildStep.Completed)
+                    if(value.BuildStep == BuildStep.Completed)
                     {
                         outputPath = buildProcess.OutputFolder + buildProcess.ResolvedHtmlHelpName;
 
@@ -561,22 +584,6 @@ namespace SandcastleBuilder.Utils.MSBuild
                         Log.LogMessage(MessageImportance.High, "Build details can be found in {0}", buildProcess.LogFilename);
                 }
             }
-        }
-        #endregion
-
-        #region ICancelableTask Members
-        //=====================================================================
-
-        /// <summary>
-        /// Cancel the build
-        /// </summary>
-        /// <remarks>The build will be cancelled as soon as the next message arrives from the build process</remarks>
-        public void Cancel()
-        {
-            buildCancelled = true;
-
-            if(cts != null)
-                cts.Cancel();
         }
         #endregion
     }

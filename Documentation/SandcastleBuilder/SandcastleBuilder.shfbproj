@@ -81,7 +81,8 @@
 <NamespaceSummaryItem name="SandcastleBuilder.Components (Group)" isGroup="True" isDocumented="True">This namespace contains &lt;strong&gt;BuildAssembler&lt;/strong&gt; related namespaces.</NamespaceSummaryItem>
 <NamespaceSummaryItem name="SandcastleBuilder.Utils (Group)" isGroup="True" isDocumented="True">This namespace contains all of the other utility and build engine related namespaces.</NamespaceSummaryItem>
 <NamespaceSummaryItem name="SandcastleBuilder.WPF (Group)" isGroup="True" isDocumented="True">This namespace contains the WPF related namespaces</NamespaceSummaryItem>
-<NamespaceSummaryItem name="SandcastleBuilder.Gui (Group)" isGroup="True" isDocumented="True">This namespace contains the standlone GUI related namespaces.</NamespaceSummaryItem></NamespaceSummaries>
+<NamespaceSummaryItem name="SandcastleBuilder.Gui (Group)" isGroup="True" isDocumented="True">This namespace contains the standlone GUI related namespaces.</NamespaceSummaryItem>
+<NamespaceSummaryItem name="SandcastleBuilder.Gui.MSBuild" isDocumented="True">This namespace contains classes used to edit the MSBuild project elements</NamespaceSummaryItem></NamespaceSummaries>
     <CleanIntermediates>True</CleanIntermediates>
     <ApiFilter>
       <Filter entryType="Namespace" fullName="Test.PlugIns" isExposed="False" />

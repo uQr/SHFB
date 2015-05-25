@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : DocumentationSource.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -70,12 +70,6 @@ namespace SandcastleBuilder.Utils
 
         #region Properties
         //=====================================================================
-
-        /// <summary>
-        /// This is used to get the owning project file
-        /// </summary>
-        [Browsable(false)]
-        public SandcastleProject ProjectFile { get; private set; }
 
         /// <summary>
         /// This is used to get or set the project configuration to use when the source path refers to a Visual
@@ -208,15 +202,14 @@ namespace SandcastleBuilder.Utils
         /// <param name="configuration">The configuration to use for projects</param>
         /// <param name="platform">The platform to use for projects</param>
         /// <param name="includeSubfolders">True to include subfolders, false to only search the top-level folder</param>
-        /// <param name="project">The owning project</param>
+        /// <param name="basePathProvider">The base path provider</param>
         internal DocumentationSource(string filename, string configuration, string platform, bool includeSubfolders,
-          SandcastleProject project)
+          IBasePathProvider basePathProvider)
         {
-            this.ProjectFile = project;
             this.includeSubFolders = includeSubfolders;
             this.configuration = configuration;
             this.platform = platform;
-            this.SourceFile = new FilePath(filename, project);
+            this.SourceFile = new FilePath(filename, basePathProvider);
         }
         #endregion
 
@@ -238,61 +231,6 @@ namespace SandcastleBuilder.Utils
 
             if(handler != null)
                 handler(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        #endregion
-
-        #region Private helper methods
-        //=====================================================================
-
-        /// <summary>
-        /// Extract all project files from the given Visual Studio solution file
-        /// </summary>
-        /// <param name="solutionFile">The Visual Studio solution from which to extract the projects.</param>
-        /// <param name="configuration">The configuration to use</param>
-        /// <param name="platform">The platform to use</param>
-        /// <returns>An enumerable list of project configurations that were extracted from the solution</returns>
-        private static IEnumerable<ProjectFileConfiguration> ExtractProjectsFromSolution(string solutionFile,
-          string configuration, string platform)
-        {
-            Regex reIsInBuild;
-            Match buildMatch;
-            string solutionContent, folder = Path.GetDirectoryName(solutionFile);
-
-            using(StreamReader sr = new StreamReader(solutionFile))
-            {
-                solutionContent = sr.ReadToEnd();
-            }
-
-            // Only add projects that are likely to contain assemblies
-            MatchCollection projects = reExtractProjectGuids.Matches(solutionContent);
-
-            foreach(Match solutionMatch in projects)
-            {
-                // See if the project is included in the build and get the configuration and platform
-                reIsInBuild = new Regex(String.Format(CultureInfo.InvariantCulture,
-                    @"\{{{0}\}}\.{1}\|{2}\.Build\.0\s*=\s*(?<Configuration>.*?)\|(?<Platform>.*)",
-                    solutionMatch.Groups["GUID"].Value, configuration, platform), RegexOptions.IgnoreCase);
-
-                buildMatch = reIsInBuild.Match(solutionContent);
-
-                // If the platform is "AnyCPU" and it didn't match, try "Any CPU" (with a space)
-                if(!buildMatch.Success && platform.Equals("AnyCPU", StringComparison.OrdinalIgnoreCase))
-                {
-                    reIsInBuild = new Regex(String.Format(CultureInfo.InvariantCulture,
-                        @"\{{{0}\}}\.{1}\|Any CPU\.Build\.0\s*=\s*(?<Configuration>.*?)\|(?<Platform>.*)",
-                        solutionMatch.Groups["GUID"].Value, configuration), RegexOptions.IgnoreCase);
-
-                    buildMatch = reIsInBuild.Match(solutionContent);
-                }
-
-                if(buildMatch.Success)
-                    yield return new ProjectFileConfiguration(Path.Combine(folder, solutionMatch.Groups["Path"].Value))
-                    {
-                        Configuration = buildMatch.Groups["Configuration"].Value.Trim(),
-                        Platform = buildMatch.Groups["Platform"].Value.Trim()
-                    };
-            }
         }
         #endregion
 
@@ -394,12 +332,12 @@ namespace SandcastleBuilder.Utils
         /// This returns an enumerable list of MSBuild project file configurations based on the current settings
         /// and the given configuration and platform.
         /// </summary>
-        /// <param name="configuration">The configuration to use</param>
-        /// <param name="platform">The platform to use</param>
+        /// <param name="configurationName">The configuration to use</param>
+        /// <param name="platformName">The platform to use</param>
         /// <returns>An enumerable list of project configurations matching the <see cref="SourceFile"/> path.
         /// Sub-folders are only included if <see cref="IncludeSubFolders"/> is set to true.  Any solution files
         /// (.sln) found are returned last, each followed by the projects extracted from them.</returns>
-        public IEnumerable<ProjectFileConfiguration> Projects(string configuration, string platform)
+        public IEnumerable<ProjectFileConfiguration> Projects(string configurationName, string platformName)
         {
             List<string> solutions = new List<string>();
             SearchOption searchOpt = SearchOption.TopDirectoryOnly;
@@ -427,7 +365,7 @@ namespace SandcastleBuilder.Utils
                 {
                     yield return new ProjectFileConfiguration(s);
 
-                    foreach(var config in ExtractProjectsFromSolution(s, configuration, platform))
+                    foreach(var config in ExtractProjectsFromSolution(s, configurationName, platformName))
                         yield return config;
                 }
             }
@@ -454,6 +392,56 @@ namespace SandcastleBuilder.Utils
 
             foreach(Match solutionMatch in projects)
                 yield return solutionMatch.Groups["Path"].Value;
+        }
+
+        /// <summary>
+        /// Extract all project files from the given Visual Studio solution file
+        /// </summary>
+        /// <param name="solutionFile">The Visual Studio solution from which to extract the projects.</param>
+        /// <param name="configuration">The configuration to use</param>
+        /// <param name="platform">The platform to use</param>
+        /// <returns>An enumerable list of project configurations that were extracted from the solution</returns>
+        private static IEnumerable<ProjectFileConfiguration> ExtractProjectsFromSolution(string solutionFile,
+          string configuration, string platform)
+        {
+            Regex reIsInBuild;
+            Match buildMatch;
+            string solutionContent, folder = Path.GetDirectoryName(solutionFile);
+
+            using(StreamReader sr = new StreamReader(solutionFile))
+            {
+                solutionContent = sr.ReadToEnd();
+            }
+
+            // Only add projects that are likely to contain assemblies
+            MatchCollection projects = reExtractProjectGuids.Matches(solutionContent);
+
+            foreach(Match solutionMatch in projects)
+            {
+                // See if the project is included in the build and get the configuration and platform
+                reIsInBuild = new Regex(String.Format(CultureInfo.InvariantCulture,
+                    @"\{{{0}\}}\.{1}\|{2}\.Build\.0\s*=\s*(?<Configuration>.*?)\|(?<Platform>.*)",
+                    solutionMatch.Groups["GUID"].Value, configuration, platform), RegexOptions.IgnoreCase);
+
+                buildMatch = reIsInBuild.Match(solutionContent);
+
+                // If the platform is "AnyCPU" and it didn't match, try "Any CPU" (with a space)
+                if(!buildMatch.Success && platform.Equals("AnyCPU", StringComparison.OrdinalIgnoreCase))
+                {
+                    reIsInBuild = new Regex(String.Format(CultureInfo.InvariantCulture,
+                        @"\{{{0}\}}\.{1}\|Any CPU\.Build\.0\s*=\s*(?<Configuration>.*?)\|(?<Platform>.*)",
+                        solutionMatch.Groups["GUID"].Value, configuration), RegexOptions.IgnoreCase);
+
+                    buildMatch = reIsInBuild.Match(solutionContent);
+                }
+
+                if(buildMatch.Success)
+                    yield return new ProjectFileConfiguration(Path.Combine(folder, solutionMatch.Groups["Path"].Value))
+                    {
+                        Configuration = buildMatch.Groups["Configuration"].Value.Trim(),
+                        Platform = buildMatch.Groups["Platform"].Value.Trim()
+                    };
+            }
         }
         #endregion
     }

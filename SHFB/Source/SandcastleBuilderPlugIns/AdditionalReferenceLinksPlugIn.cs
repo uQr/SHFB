@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : AdditionalReferenceLinksPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/24/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -159,7 +159,7 @@ namespace SandcastleBuilder.PlugIns
                 // Build each of the projects
                 foreach(ReferenceLinkSettings vs in otherLinks)
                 {
-                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true))
+                    using(SandcastleProject project = new SandcastleProject(vs.HelpFileProject, true, true))
                     {
                         // We'll use a working folder below the current project's working folder
                         workingPath = builder.WorkingFolder + vs.HelpFileProject.GetHashCode().ToString("X",

@@ -129,6 +129,7 @@
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IntelliSenseOnlyPlugIn.cs" />
     <Compile Include="LightweightWebsiteStylePlugIn.cs" />
+    <Compile Include="ManualVisibilityApiFilterPlugIn.cs" />
     <Compile Include="MemberIDFixUpPlugIn.cs" />
     <Compile Include="MemberIDFixUpPlugInConfigDlg.cs">
       <SubType>Form</SubType>

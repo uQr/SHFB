@@ -581,8 +581,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
             apiTocOrder = -1;
             apiTocParentId = rootContentContainerId = String.Empty;
 
-            excludeElementEval = new MatchEvaluator(OnExcludeElement);
-
             help1Files = new Collection<string>();
             helpViewerFiles = new Collection<string>();
             websiteFiles = new Collection<string>();

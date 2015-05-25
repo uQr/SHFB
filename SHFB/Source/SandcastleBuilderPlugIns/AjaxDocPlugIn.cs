@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Plug-Ins
 // File    : AjaxDocPlugIn.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/25/2015
 // Note    : Copyright 2007-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -47,12 +47,15 @@ namespace SandcastleBuilder.PlugIns
     /// This plug-in class is designed to generate XML comments and reflection file information for Atlas client
     /// script libraries using AjaxDoc.
     /// </summary>
+    /// <remarks><note type="note">If you want the visibility settings and API filter applied, add the Manual
+    /// Visibility/API filter plug-in to the project as well.</note></remarks>
     [HelpFileBuilderPlugInExport("AjaxDoc Builder", IsConfigurable = true, RunsInPartialBuild = true,
       Version = AssemblyInfo.ProductVersion, Copyright = AssemblyInfo.Copyright + "\r\nAjaxDoc is Copyright \xA9 " +
       "2006-2013 Bertrand Le Roy, All Rights Reserved",
       Description = "This plug-in is used to generate XML comments and reflection information for Atlas " +
         "client script libraries using AjaxDoc that can then be used by the Sandcastle Help File " +
-        "Builder to produce a help file.")]
+        "Builder to produce a help file.\r\n\r\nNOTE: If you want the visibility settings and API filter " +
+        "applied, add the Manual Visibility/API filter plug-in to the project as well.")]
     public sealed class AjaxDocPlugIn : IPlugIn
     {
         #region Private data members
@@ -330,15 +333,8 @@ namespace SandcastleBuilder.PlugIns
                 sw.Write(content);
             }
 
-            builder.ReportProgress("Applying visibility settings manually");
-            builder.ApplyVisibilityProperties(builder.ReflectionInfoFilename);
-
-            // Don't apply the API filter settings in a partial build
-            if(builder.PartialBuildType == PartialBuildType.None && builder.CurrentProject.ApiFilter.Count != 0)
-            {
-                builder.ReportProgress("Applying API filter manually");
-                builder.ApplyManualApiFilter(builder.CurrentProject.ApiFilter, builder.ReflectionInfoFilename);
-            }
+            // NOTE: If you want the visibility settings and API filter applied, add the Manual Visibility/API
+            // filter plug-in to the project as well.
 
             // Allow After step plug-ins to run
             builder.ExecuteAfterStepPlugIns();

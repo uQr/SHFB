@@ -106,7 +106,6 @@
     <Compile Include="Design\SubstitutionTagAttribute.cs" />
     <Compile Include="BuilderException.cs" />
     <Compile Include="BuildEngine\BuildProcess.HelpFileUtils.cs" />
-    <Compile Include="BuildEngine\BuildProcess.NamespaceRipping.cs" />
     <Compile Include="BuildEngine\BuildProcess.Namespaces.cs" />
     <Compile Include="BuildEngine\BuildProcess.PlugIns.cs" />
     <Compile Include="BuildEngine\BuildProcess.ConfigFiles.cs" />
@@ -231,7 +230,6 @@
     <Compile Include="Controls\StatusBarTextProvider.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="BuildEngine\BuildProcess.PurgeItems.cs" />
     <Compile Include="SandcastleProject.cs" />
     <Compile Include="ConceptualContent\TocEntry.cs" />
     <Compile Include="ConceptualContent\TocEntryCollection.cs" />

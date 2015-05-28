@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : TopicFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/17/2015
+// Updated : 05/27/2015
 // Note    : Copyright 2008-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -26,6 +26,8 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.XPath;
+
+using Sandcastle.Core;
 
 namespace SandcastleBuilder.Utils.ConceptualContent
 {
@@ -253,28 +255,20 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// <summary>
         /// This is used to get an enumerable list of unique namespaces referenced in the topic
         /// </summary>
-        /// <param name="reflectionDataPath">The reflection data path containing the valid namespace files</param>
+        /// <param name="validNamespaces">An enumerable list of valid framework namespaces</param>
         /// <returns>An enumerable list of unique namespaces in the topic</returns>
-        public IEnumerable<string> GetReferencedNamespaces(string reflectionDataPath)
+        public IEnumerable<string> GetReferencedNamespaces(IEnumerable<string> validNamespaces)
         {
-            XPathDocument doc = new XPathDocument(contentFile.FullPath);
-            XPathNavigator nav = doc.CreateNavigator();
-            XmlNamespaceManager nsMgr = new XmlNamespaceManager(nav.NameTable);
-            nsMgr.AddNamespace("ddue", "http://ddue.schemas.microsoft.com/authoring/2003/5"); 
-
             HashSet<string> seenNamespaces = new HashSet<string>();
             string ns;
 
-            HashSet<string> validNamespaces = new HashSet<string>(Directory.EnumerateFiles(reflectionDataPath,
-                "*.xml", SearchOption.AllDirectories).Select(f => Path.GetFileNameWithoutExtension(f)));
-
             // Find all code entity references
-            var nodes = nav.Select("//ddue:codeEntityReference", nsMgr);
+            var entityRefs = ComponentUtilities.XmlStreamAxis(contentFile.FullPath, "codeEntityReference").Select(el => el.Value);
 
-            foreach(XPathNavigator n in nodes)
-                if(n.Value.Length > 2 && n.Value.IndexOfAny(new[] { '.', '(' }) != -1)
+            foreach(var refName in entityRefs)
+                if(refName.Length > 2 && refName.IndexOfAny(new[] { '.', '(' }) != -1)
                 {
-                    ns = n.Value.Trim();
+                    ns = refName.Trim();
 
                     // Strip off member name?
                     if(!ns.StartsWith("R:", StringComparison.OrdinalIgnoreCase) &&

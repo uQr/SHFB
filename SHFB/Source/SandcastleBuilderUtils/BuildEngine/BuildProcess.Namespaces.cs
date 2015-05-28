@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Utilities
 // File    : BuildProcess.Namespaces.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 05/23/2015
+// Updated : 05/27/2015
 // Note    : Copyright 2006-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -35,8 +35,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
-using System.Xml.XPath;
+using System.Xml.Linq;
 
+using Sandcastle.Core;
 using SandcastleBuilder.Utils.BuildComponent;
 
 namespace SandcastleBuilder.Utils.BuildEngine
@@ -71,7 +72,6 @@ namespace SandcastleBuilder.Utils.BuildEngine
         /// </summary>
         private void GenerateNamespaceSummaries()
         {
-            XmlNodeList nsElements;
             XmlNode member;
             NamespaceSummaryItem nsi;
             string nsName = null, summaryText;
@@ -120,14 +120,20 @@ namespace SandcastleBuilder.Utils.BuildEngine
                     this.AddNamespaceComments(member, project.ProjectSummary);
                 }
 
-                // Get all the namespace nodes
-                nsElements = apisNode.SelectNodes("api[starts-with(@id, 'N:') or (starts-with(@id, 'G:') and " +
-                    "not(topicdata/@group='rootGroup'))]");
+                // Get all the namespace and namespace group nodes from the reflection information file
+                var nsElements =
+                    ComponentUtilities.XmlStreamAxis(reflectionFile, "api").Where(el =>
+                    {
+                        string id = el.Attribute("id").Value;
+
+                        return (id.Length > 1 && id[1] == ':' && (id[0] == 'N' || id[0] == 'G') &&
+                            el.Element("topicdata").Attribute("group").Value != "rootGroup");
+                    }).Select(el => el.Attribute("id").Value);
 
                 // Add the namespace summaries
-                foreach(XmlNode n in nsElements)
+                foreach(var n in nsElements)
                 {
-                    nsName = n.Attributes["id"].Value;
+                    nsName = n;
 
                     nsi = project.NamespaceSummaries[nsName.StartsWith("N:", StringComparison.Ordinal) ?
                         nsName.Substring(2) : nsName.Substring(2) + " (Group)"];
@@ -144,20 +150,12 @@ namespace SandcastleBuilder.Utils.BuildEngine
                         summaryText = String.Empty;
                     }
 
-                    // As of 1.5.0.2, namespace removal is handled by the MRefBuilder ripping feature so we don't
-                    // have to deal with it here anymore.
-
-                    // MRefBuilder bug, June CTP and prior.  If ripped, an empty node still appears in the
-                    // reflection file that needs to go away when using /internal+.
-                    if(n.SelectSingleNode("elements").ChildNodes.Count == 0)
-                        n.ParentNode.RemoveChild(n);
-                    else
-                        if(isDocumented)
-                        {
-                            // If documented, add the summary text
-                            member = commentsFiles.FindMember(nsName);
-                            this.AddNamespaceComments(member, summaryText);
-                        }
+                    if(isDocumented)
+                    {
+                        // If documented, add the summary text
+                        member = commentsFiles.FindMember(nsName);
+                        this.AddNamespaceComments(member, summaryText);
+                    }
                 }
             }
             catch(Exception ex)
@@ -220,22 +218,21 @@ namespace SandcastleBuilder.Utils.BuildEngine
         public static IEnumerable<string> GetReferencedNamespaces(string reflectionInfoFile,
           IEnumerable<string> validNamespaces)
         {
-            XPathDocument doc = new XPathDocument(reflectionInfoFile);
-            XPathNavigator nav = doc.CreateNavigator();
             HashSet<string> seenNamespaces = new HashSet<string>();
             string ns;
 
             // Find all type references and extract the namespace from them.  This is a rather brute force way
             // of doing it but the type element can appear in various places.  This way we find them all.
-            // Examples: //ancestors/type/@api, //returns/type/@api, //parameter/type/@api,
-            // //parameter/referenceTo/type/@api, //attributes/attribute/argument/type/@api,
-            // //returns/type/specialization/type/@api, //containers/type/@api, //overrides/member/type/@api
-            var nodes = nav.Select("//type/@api");
+            // Examples: ancestors/type/@api, returns/type/@api, parameter/type/@api,
+            // parameter/referenceTo/type/@api, attributes/attribute/argument/type/@api,
+            // returns/type/specialization/type/@api, containers/type/@api, overrides/member/type/@api
+            var typeRefs = ComponentUtilities.XmlStreamAxis(reflectionInfoFile, "type").Select(
+                el => el.Attribute("api").Value);
 
-            foreach(XPathNavigator n in nodes)
-                if(n.Value.Length > 2 && n.Value.IndexOf('.') != -1)
+            foreach(string typeName in typeRefs)
+                if(typeName.Length > 2 && typeName.IndexOf('.') != -1)
                 {
-                    ns = n.Value.Substring(2, n.Value.LastIndexOf('.') - 2);
+                    ns = typeName.Substring(2, typeName.LastIndexOf('.') - 2);
 
                     if(validNamespaces.Contains(ns) && !seenNamespaces.Contains(ns))
                     {

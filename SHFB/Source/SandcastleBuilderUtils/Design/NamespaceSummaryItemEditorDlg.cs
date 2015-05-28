@@ -285,6 +285,11 @@ namespace SandcastleBuilder.Utils.Design
                     pbWait.Visible = lblProgress.Visible = false;
                     lbNamespaces.Focus();
                 }
+                else
+                {
+                    this.DialogResult = DialogResult.Cancel;
+                    this.Close();
+                }
 
                 buildProcess = null;
             }
@@ -311,7 +316,7 @@ namespace SandcastleBuilder.Utils.Design
         /// <param name="e">The event arguments</param>
         private void NamespacesDlg_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if(cancellationTokenSource != null)
+            if(cancellationTokenSource != null && this.DialogResult != DialogResult.Cancel)
             {
                 if(MessageBox.Show("A build is currently taking place to obtain namespace information.  Do " +
                   "you want to abort it and close this form?", Constants.AppName, MessageBoxButtons.YesNo,
@@ -321,34 +326,21 @@ namespace SandcastleBuilder.Utils.Design
                     return;
                 }
 
-                this.Cursor = Cursors.WaitCursor;
-
                 if(cancellationTokenSource != null)
+                {
                     cancellationTokenSource.Cancel();
-
-                try
-                {
-                    Cursor.Current = Cursors.WaitCursor;
-
-                    while(buildProcess != null && buildProcess.CurrentBuildStep < BuildStep.Completed)
-                        Thread.Sleep(100);
-                }
-                finally
-                {
-                    Cursor.Current = Cursors.Default;
+                    e.Cancel = true;
                 }
 
-                this.DialogResult = DialogResult.Cancel;
+                return;
             }
-            else
-            {
-                // Add new items that were modified
-                foreach(var item in lbNamespaces.Items.OfType<NamespaceSummaryItem>().Where(ns => ns.IsDirty))
-                    if(nsColl[item.Name] == null)
-                        nsColl.Add(item);
 
-                this.DialogResult = nsColl.Any(ns => ns.IsDirty) ? DialogResult.OK : DialogResult.Cancel;
-            }
+            // Add new items that were modified
+            foreach(var item in lbNamespaces.Items.OfType<NamespaceSummaryItem>().Where(ns => ns.IsDirty))
+                if(nsColl[item.Name] == null)
+                    nsColl.Add(item);
+
+            this.DialogResult = nsColl.Any(ns => ns.IsDirty) ? DialogResult.OK : DialogResult.Cancel;
 
             if(tempProject != null)
             {

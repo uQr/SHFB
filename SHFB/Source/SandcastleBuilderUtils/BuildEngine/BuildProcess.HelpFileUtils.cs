@@ -422,6 +422,9 @@ namespace SandcastleBuilder.Utils.BuildEngine
             {
                 node = tocXml.SelectSingleNode("topics/topic");
 
+                // TODO: Review and test this code.  How could it get here?  Empty container node first?  What
+                // if empty container node with no children (i.e. API insertion point place holder)?  Could that
+                // account for the occasional report for the BE0026 error?
                 if(node != null)
                 {
                     if(node.Attributes["file"] != null)

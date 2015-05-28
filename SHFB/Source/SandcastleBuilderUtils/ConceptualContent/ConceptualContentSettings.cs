@@ -187,11 +187,15 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
             builder.ReportProgress("Generating conceptual topic files");
 
+            // Get the list of valid framework namespaces for the referenced namespace search in each topic
+            HashSet<string> validNamespaces = new HashSet<string>(Directory.EnumerateFiles(builder.FrameworkReflectionDataFolder,
+                "*.xml", SearchOption.AllDirectories).Select(f => Path.GetFileNameWithoutExtension(f)));
+
             // Create topic files
             foreach(TopicCollection tc in topics)
             {
                 tc.Load();
-                tc.GenerateConceptualTopics(folder, builder);
+                tc.GenerateConceptualTopics(folder, builder, validNamespaces);
             }
         }
 

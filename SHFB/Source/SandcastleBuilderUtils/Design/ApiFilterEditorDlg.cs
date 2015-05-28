@@ -1462,6 +1462,11 @@ namespace SandcastleBuilder.Utils.Design
 
                     pbWait.Visible = lblLoading.Visible = false;
                 }
+                else
+                {
+                    this.DialogResult = DialogResult.Cancel;
+                    this.Close();
+                }
 
                 buildProcess = null;
             }
@@ -1488,7 +1493,7 @@ namespace SandcastleBuilder.Utils.Design
         /// <param name="e">The event arguments</param>
         private void ApiFilterEditorDlg_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if(cancellationTokenSource != null)
+            if(cancellationTokenSource != null && this.DialogResult != DialogResult.Cancel)
             {
                 if(MessageBox.Show("A build is currently taking place to obtain API information.  Do you want " +
                   "to abort it and close this form?", Constants.AppName, MessageBoxButtons.YesNo,
@@ -1498,36 +1503,25 @@ namespace SandcastleBuilder.Utils.Design
                     return;
                 }
 
-                this.Cursor = Cursors.WaitCursor;
-
                 if(cancellationTokenSource != null)
+                {
                     cancellationTokenSource.Cancel();
-
-                try
-                {
-                    Cursor.Current = Cursors.WaitCursor;
-
-                    while(buildProcess != null && buildProcess.CurrentBuildStep < BuildStep.Completed)
-                        Thread.Sleep(100);
-                }
-                finally
-                {
-                    Cursor.Current = Cursors.Default;
+                    e.Cancel = true;
                 }
 
-                this.DialogResult = DialogResult.Cancel;
+                return;
             }
-            else
-                if(wasModified)
-                {
-                    apiFilter.Clear();
 
-                    // Add documented namespace filters
-                    this.AddNamespaceFilter(tvApiList.Nodes[0]);
+            if(wasModified)
+            {
+                apiFilter.Clear();
 
-                    // Add filters for inherited types
-                    this.AddNamespaceFilter(tvApiList.Nodes[1]);
-                }
+                // Add documented namespace filters
+                this.AddNamespaceFilter(tvApiList.Nodes[0]);
+
+                // Add filters for inherited types
+                this.AddNamespaceFilter(tvApiList.Nodes[1]);
+            }
 
             if(tempProject != null)
             {

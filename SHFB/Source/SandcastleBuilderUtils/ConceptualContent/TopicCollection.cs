@@ -396,9 +396,10 @@ namespace SandcastleBuilder.Utils.ConceptualContent
         /// </summary>
         /// <param name="folder">The folder in which to place the topic files</param>
         /// <param name="builder">The build process</param>
+        /// <param name="validNamespaces">An enumerable list of valid framework namespaces</param>
         /// <remarks>Each topic file will be named using its <see cref="Topic.Id" />.  If necessary, its content
         /// will be wrapped in a <c>&lt;topic&gt;</c> element.  Sub-topics are written out recursively.</remarks>
-        public void GenerateConceptualTopics(string folder, BuildProcess builder)
+        public void GenerateConceptualTopics(string folder, BuildProcess builder, IEnumerable<string> validNamespaces)
         {
             Encoding enc;
             string destFile, templateText;
@@ -427,9 +428,9 @@ namespace SandcastleBuilder.Utils.ConceptualContent
 
                         // When reading the file, use the default encoding but
                         // detect the encoding if byte order marks are present.
-                        templateText = Utility.ReadWithEncoding(builder.TemplateFolder +
-                            "PlaceHolderNode.aml", ref enc);
-                            
+                        templateText = Utility.ReadWithEncoding(builder.TemplateFolder + "PlaceHolderNode.aml",
+                            ref enc);
+
                         templateText = templateText.Replace("{@GUID}", t.Id);
 
                         destFile = Path.Combine(folder, t.Id + ".xml");
@@ -441,7 +442,7 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                         }
                     }
 
-                    t.Subtopics.GenerateConceptualTopics(folder, builder);
+                    t.Subtopics.GenerateConceptualTopics(folder, builder, validNamespaces);
                     continue;
                 }
 
@@ -474,11 +475,11 @@ namespace SandcastleBuilder.Utils.ConceptualContent
                 // Add referenced namespaces to the build process
                 var rn = builder.ReferencedNamespaces;
 
-                foreach(string ns in t.TopicFile.GetReferencedNamespaces(builder.FrameworkReflectionDataFolder))
+                foreach(string ns in t.TopicFile.GetReferencedNamespaces(validNamespaces))
                     rn.Add(ns);
 
                 if(t.Subtopics.Count != 0)
-                    t.Subtopics.GenerateConceptualTopics(folder, builder);
+                    t.Subtopics.GenerateConceptualTopics(folder, builder, validNamespaces);
             }
         }
         #endregion
